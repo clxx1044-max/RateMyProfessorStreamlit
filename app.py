@@ -212,28 +212,41 @@ load_css()
 @st.cache_resource
 def get_database():
     """
-    Local use:
-    Put serviceAccountKey.json in the same folder as app.py.
+    Local:
+    Use serviceAccountKey.json in the same folder as app.py.
 
     Streamlit Cloud:
-    Use secrets later, but local serviceAccountKey.json is easiest for now.
+    Use [firebase_service_account] in Streamlit secrets.
     """
 
     if not firebase_admin._apps:
         folder = os.path.dirname(os.path.abspath(__file__))
         key_file = os.path.join(folder, "serviceAccountKey.json")
 
-        if os.path.exists(key_file):
+        secret_data = None
+
+        try:
+            if "firebase_service_account" in st.secrets:
+                secret_data = dict(st.secrets["firebase_service_account"])
+        except Exception:
+            secret_data = None
+
+        if secret_data is not None:
+            cred = credentials.Certificate(secret_data)
+            firebase_admin.initialize_app(cred)
+
+        elif os.path.exists(key_file):
             cred = credentials.Certificate(key_file)
             firebase_admin.initialize_app(cred)
+
         else:
             st.error(
-                "Firebase is not connected. Put serviceAccountKey.json in the same folder as app.py."
+                "Firebase is not connected. Locally, add serviceAccountKey.json. "
+                "On Streamlit Cloud, add Firebase credentials in Secrets."
             )
             return None
 
     return firestore.client()
-
 
 db = get_database()
 
