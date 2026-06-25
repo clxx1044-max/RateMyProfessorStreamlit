@@ -639,9 +639,14 @@ def show_reviews_page():
         unsafe_allow_html=True
     )
 
-    back_button("see_list")
+    if st.button("Back"):
+        go_to("see_list")
+
+    st.write("Loading reviews...")
 
     reviews = get_reviews_for_professor(name)
+
+    st.write("Finished loading reviews.")
 
     if len(reviews) == 0:
         st.info("No reviews yet.")
@@ -652,37 +657,26 @@ def show_reviews_page():
 
     for data in reviews:
         review_text = data.get("review", "")
-
         rating = data.get("rating")
 
         if rating is None:
             rating = g_rat(review_text)
 
         rating_type = data.get("rating_type", "Automatic")
+        total_rating += rating
 
-        total_rating = total_rating + rating
+        st.markdown(
+            f"""
+            <div class="review-card">
+                <h2>Review {number}</h2>
+                <p><strong>Rating:</strong> {rating}/5 {g_str(rating)} ({rating_type})</p>
+                <p>{review_text}</p>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
-        review_html = f"""
-        <div class="review-card">
-            <h2>Review {number}</h2>
-            <p><strong>Rating:</strong> {rating}/5 {g_str(rating)} ({rating_type})</p>
-        """
-
-        if rating_type == "Manual":
-            old_auto_rating = data.get("automatic_rating", "Unknown")
-
-            review_html += f"""
-            <p><strong>Automatic rating was:</strong> {old_auto_rating}/5</p>
-            """
-
-        review_html += f"""
-            <p>{review_text}</p>
-        </div>
-        """
-
-        st.markdown(review_html, unsafe_allow_html=True)
-
-        number = number + 1
+        number += 1
 
     average = total_rating / (number - 1)
     average = round(average * 2) / 2
