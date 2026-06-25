@@ -19,7 +19,12 @@ st.set_page_config(
     layout="centered"
 )
 
-
+docs = (
+    db.collection("reviews")
+    .where("professor", "==", name)
+    .limit(20)
+    .get(timeout=10)
+)
 # ============================================================
 # Background and styling
 # ============================================================
