@@ -1,6 +1,9 @@
 import base64
 import os
 
+# This must be set before importing firebase/firestore.
+os.environ["GOOGLE_CLOUD_DISABLE_GRPC"] = "true"
+
 import streamlit as st
 from textblob import TextBlob
 
@@ -8,10 +11,6 @@ import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
 
-os.environ["GOOGLE_CLOUD_DISABLE_GRPC"] = "true"
-# ============================================================
-# Page setup
-# ============================================================
 
 st.set_page_config(
     page_title="Rate My Professor",
@@ -19,9 +18,6 @@ st.set_page_config(
     layout="centered"
 )
 
-# ============================================================
-# Background and styling
-# ============================================================
 
 def load_background():
     folder = os.path.dirname(os.path.abspath(__file__))
@@ -36,7 +32,7 @@ def load_background():
             <style>
             .stApp {{
                 background-image:
-                    linear-gradient(rgba(0, 0, 0, 0.25), rgba(0, 0, 0, 0.25)),
+                    linear-gradient(rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.35)),
                     url("data:image/jpg;base64,{encoded_image}");
                 background-size: cover;
                 background-position: center;
@@ -68,7 +64,7 @@ def load_css():
         }
 
         .block-container {
-            padding-top: 3rem;
+            padding-top: 2.5rem;
             padding-bottom: 3rem;
         }
 
@@ -80,7 +76,7 @@ def load_css():
             font-weight: bold;
             padding: 18px 30px;
             border-radius: 10px;
-            margin-top: 40px;
+            margin-top: 35px;
             margin-bottom: 50px;
             border: 3px solid rgba(7, 27, 58, 0.2);
             box-shadow: 0 6px 18px rgba(0,0,0,0.18);
@@ -102,7 +98,7 @@ def load_css():
 
         .section-title {
             color: #5c258d;
-            background-color: #f2f2f2;
+            background-color: rgba(242, 242, 242, 0.72);
             border-radius: 8px;
             font-size: 32px;
             font-weight: bold;
@@ -114,7 +110,7 @@ def load_css():
 
         .rating-big {
             color: #5c258d;
-            background-color: #f2f2f2;
+            background-color: rgba(242, 242, 242, 0.90);
             border: 3px ridge #999;
             border-radius: 10px;
             font-size: 42px;
@@ -125,7 +121,7 @@ def load_css():
         }
 
         .review-card {
-            background-color: white;
+            background-color: rgba(255,255,255,0.94);
             border: 2px solid #cccccc;
             border-radius: 8px;
             padding: 18px;
@@ -154,7 +150,7 @@ def load_css():
         }
 
         .info-box {
-            background-color: #f2f2f2;
+            background-color: rgba(242, 242, 242, 0.90);
             border: 3px ridge #999;
             border-radius: 10px;
             padding: 22px;
@@ -166,7 +162,7 @@ def load_css():
         }
 
         .small-note {
-            color: #333333;
+            color: white;
             font-size: 15px;
             text-align: center;
         }
@@ -194,6 +190,10 @@ def load_css():
             font-family: Arial, sans-serif !important;
             font-size: 18px !important;
         }
+
+        .stMarkdown, .stText, p, label {
+            color: white;
+        }
         </style>
         """,
         unsafe_allow_html=True
@@ -204,20 +204,8 @@ load_background()
 load_css()
 
 
-# ============================================================
-# Firebase connection
-# ============================================================
-
 @st.cache_resource
 def get_database():
-    """
-    Local:
-    Use serviceAccountKey.json in the same folder as app.py.
-
-    Streamlit Cloud:
-    Use [firebase_service_account] in Streamlit secrets.
-    """
-
     if not firebase_admin._apps:
         folder = os.path.dirname(os.path.abspath(__file__))
         key_file = os.path.join(folder, "serviceAccountKey.json")
@@ -233,26 +221,21 @@ def get_database():
         if secret_data is not None:
             cred = credentials.Certificate(secret_data)
             firebase_admin.initialize_app(cred)
-
         elif os.path.exists(key_file):
             cred = credentials.Certificate(key_file)
             firebase_admin.initialize_app(cred)
-
         else:
             st.error(
-                "Firebase is not connected. Locally, add serviceAccountKey.json. "
-                "On Streamlit Cloud, add Firebase credentials in Secrets."
+                "Firebase is not connected. Add serviceAccountKey.json next to app.py "
+                "or add Firebase credentials in Streamlit Secrets."
             )
             return None
 
     return firestore.client()
 
+
 db = get_database()
 
-
-# ============================================================
-# Professor list
-# ============================================================
 
 professors = [
     "IST:",
@@ -277,7 +260,6 @@ professors = [
     "Nhan Nguyen",
     "Pedro Goncalves de Paiva",
     "Rapunzel Chen",
-
     "PLE:",
     "Diego Martinez Rios",
     "Josie Morrison",
@@ -296,7 +278,6 @@ professors = [
     "Taisei Ishikawa",
     "Taylor Craig",
     "Zeeshan Ali",
-
     "SGC:",
     "Bamlak Aklilu",
     "Divin Dushimimana",
@@ -317,71 +298,50 @@ professors = [
 ]
 
 
-# ============================================================
-# Rating functions
-# ============================================================
-
 def g_rat(review):
     blob = TextBlob(review)
     polarity = blob.sentiment.polarity
-
     rating = (polarity + 1) * 2.5
-
     words = review.lower()
 
     if "would not recommend" in words:
         rating -= 1
-
     if "avoid" in words:
         rating -= 1
-
     if "unfair" in words:
         rating -= 0.5
-
     if "confusing" in words:
         rating -= 0.5
-
     if "disorganised" in words or "disorganized" in words:
         rating -= 0.5
 
     rating = round(rating * 2) / 2
     rating = max(0, min(5, rating))
-
     return rating
 
 
 def g_str(rating):
     full_stars = int(rating)
     half_star = rating - full_stars
-
     stars = "★" * full_stars
 
     if half_star == 0.5:
         stars = stars + "½"
-
     if stars == "":
         stars = "No stars"
 
     return stars
 
 
-# ============================================================
-# Session state / navigation
-# ============================================================
-
 def setup_state():
     if "page" not in st.session_state:
         st.session_state.page = "home"
-
     if "chosen_professor" not in st.session_state:
         st.session_state.chosen_professor = ""
-
     if "current_review" not in st.session_state:
         st.session_state.current_review = ""
-
     if "auto_rating" not in st.session_state:
         st.session_state.auto_rating = 0.0
-
     if "success_message" not in st.session_state:
         st.session_state.success_message = ""
 
@@ -411,10 +371,6 @@ def back_button(target_page):
 setup_state()
 
 
-# ============================================================
-# Firestore helper functions
-# ============================================================
-
 def save_review_to_db(name, review, final_rating, auto_rating, rating_type):
     if db is None:
         st.error("Firebase is not connected.")
@@ -429,12 +385,10 @@ def save_review_to_db(name, review, final_rating, auto_rating, rating_type):
             "rating_type": rating_type,
             "created_at": firestore.SERVER_TIMESTAMP
         })
-
         return True
-
     except Exception as error:
         st.error("The review could not be saved.")
-        st.code(str(error))
+        st.exception(error)
         return False
 
 
@@ -444,8 +398,6 @@ def get_reviews_for_professor(name):
         return []
 
     try:
-        st.write("Connecting to Firestore...")
-
         docs = (
             db.collection("reviews")
             .where("professor", "==", name)
@@ -453,15 +405,9 @@ def get_reviews_for_professor(name):
             .get(timeout=10)
         )
 
-        st.write("Finished Firestore request.")
-
         results = []
-
         for doc in docs:
             results.append(doc.to_dict())
-
-        st.write("Loaded this many reviews:", len(results))
-
         return results
 
     except Exception as error:
@@ -469,48 +415,30 @@ def get_reviews_for_professor(name):
         st.exception(error)
         return []
 
-# ============================================================
-# Pages
-# ============================================================
 
 def home_page():
-    st.markdown(
-        '<div class="main-title">Rate My Professor</div>',
-        unsafe_allow_html=True
-    )
-
+    st.markdown('<div class="main-title">Rate My Professor</div>', unsafe_allow_html=True)
     show_success_message()
 
     left, middle, right = st.columns([1, 2, 1])
-
     with middle:
         if st.button("💬  See Reviews"):
             go_to("see_list")
-
         if st.button("✎  Write Reviews"):
             go_to("write_list")
 
 
 def professor_list_page(mode):
     if mode == "write":
-        st.markdown(
-            '<div class="page-title">Choose a Professor to Review</div>',
-            unsafe_allow_html=True
-        )
+        st.markdown('<div class="page-title">Choose a Professor to Review</div>', unsafe_allow_html=True)
     else:
-        st.markdown(
-            '<div class="page-title">Choose a Professor to View Reviews</div>',
-            unsafe_allow_html=True
-        )
+        st.markdown('<div class="page-title">Choose a Professor to View Reviews</div>', unsafe_allow_html=True)
 
     back_button("home")
 
     for item in professors:
         if item.endswith(":"):
-            st.markdown(
-                f'<div class="section-title">{item}</div>',
-                unsafe_allow_html=True
-            )
+            st.markdown(f'<div class="section-title">{item}</div>', unsafe_allow_html=True)
         else:
             if mode == "write":
                 if st.button(item, key="write_" + item):
@@ -522,32 +450,20 @@ def professor_list_page(mode):
 
 def write_review_page():
     name = st.session_state.chosen_professor
-
-    st.markdown(
-        f'<div class="page-title">Leave a review for {name}</div>',
-        unsafe_allow_html=True
-    )
-
+    st.markdown(f'<div class="page-title">Leave a review for {name}</div>', unsafe_allow_html=True)
     back_button("write_list")
 
-    review = st.text_area(
-        "Write your review here:",
-        height=260,
-        key="review_text_area"
-    )
+    review = st.text_area("Write your review here:", height=260, key="review_text_area")
 
     if st.button("Submit Review"):
         review = review.strip()
-
         if review == "":
             st.warning("Please write a review first.")
         else:
             auto_rating = g_rat(review)
-
             st.session_state.current_review = review
             st.session_state.auto_rating = auto_rating
             st.session_state.page = "check_rating"
-
             st.rerun()
 
 
@@ -556,11 +472,7 @@ def check_rating_page():
     review = st.session_state.current_review
     auto_rating = st.session_state.auto_rating
 
-    st.markdown(
-        '<div class="page-title">Check the Automatic Rating</div>',
-        unsafe_allow_html=True
-    )
-
+    st.markdown('<div class="page-title">Check the Automatic Rating</div>', unsafe_allow_html=True)
     back_button("write_review")
 
     st.markdown(
@@ -572,32 +484,16 @@ def check_rating_page():
         unsafe_allow_html=True
     )
 
-    st.markdown(
-        f'<div class="rating-big">{auto_rating}/5 {g_str(auto_rating)}</div>',
-        unsafe_allow_html=True
-    )
-
+    st.markdown(f'<div class="rating-big">{auto_rating}/5 {g_str(auto_rating)}</div>', unsafe_allow_html=True)
     st.write("Do you agree with this rating?")
 
     if st.button("Yes, use this automatic rating"):
-        saved = save_review_to_db(
-            name,
-            review,
-            auto_rating,
-            auto_rating,
-            "Automatic"
-        )
-
+        saved = save_review_to_db(name, review, auto_rating, auto_rating, "Automatic")
         if saved:
-            st.session_state.success_message = (
-                "Your review was submitted. Final rating: "
-                + str(auto_rating)
-                + "/5"
-            )
+            st.session_state.success_message = "Your review was submitted. Final rating: " + str(auto_rating) + "/5"
             go_to("home")
 
     st.subheader("Or give your own rating:")
-
     manual_rating = st.number_input(
         "Manual rating",
         min_value=0.0,
@@ -608,21 +504,9 @@ def check_rating_page():
 
     if st.button("Submit My Rating"):
         manual_rating = round(manual_rating * 2) / 2
-
-        saved = save_review_to_db(
-            name,
-            review,
-            manual_rating,
-            auto_rating,
-            "Manual"
-        )
-
+        saved = save_review_to_db(name, review, manual_rating, auto_rating, "Manual")
         if saved:
-            st.session_state.success_message = (
-                "Your review was submitted. Final rating: "
-                + str(manual_rating)
-                + "/5"
-            )
+            st.session_state.success_message = "Your review was submitted. Final rating: " + str(manual_rating) + "/5"
             go_to("home")
 
     st.markdown(
@@ -633,24 +517,10 @@ def check_rating_page():
 
 def show_reviews_page():
     name = st.session_state.chosen_professor
-
-    st.markdown(
-        f'<div class="page-title">{name} Reviews</div>',
-        unsafe_allow_html=True
-    )
-
-    if st.button("Back"):
-        go_to("see_list")
-
-    st.write("Loading reviews...")
-
-    st.write("Trying to load reviews for:", name)
+    st.markdown(f'<div class="page-title">{name} Reviews</div>', unsafe_allow_html=True)
+    back_button("see_list")
 
     reviews = get_reviews_for_professor(name)
-
-    st.write("Loaded this many reviews:", len(reviews))
-
-    st.write("Finished loading reviews.")
 
     if len(reviews) == 0:
         st.info("No reviews yet.")
@@ -667,20 +537,33 @@ def show_reviews_page():
             rating = g_rat(review_text)
 
         rating_type = data.get("rating_type", "Automatic")
-        total_rating += rating
 
-        st.markdown(
-            f"""
-            <div class="review-card">
-                <h2>Review {number}</h2>
-                <p><strong>Rating:</strong> {rating}/5 {g_str(rating)} ({rating_type})</p>
-                <p>{review_text}</p>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+        try:
+            rating = float(rating)
+        except Exception:
+            rating = g_rat(review_text)
 
-        number += 1
+        total_rating = total_rating + rating
+
+        review_html = f"""
+        <div class="review-card">
+            <h2>Review {number}</h2>
+            <p><strong>Rating:</strong> {rating}/5 {g_str(rating)} ({rating_type})</p>
+        """
+
+        if rating_type == "Manual":
+            old_auto_rating = data.get("automatic_rating", "Unknown")
+            review_html += f"""
+            <p><strong>Automatic rating was:</strong> {old_auto_rating}/5</p>
+            """
+
+        review_html += f"""
+            <p>{review_text}</p>
+        </div>
+        """
+
+        st.markdown(review_html, unsafe_allow_html=True)
+        number = number + 1
 
     average = total_rating / (number - 1)
     average = round(average * 2) / 2
@@ -691,28 +574,18 @@ def show_reviews_page():
     )
 
 
-# ============================================================
-# Run the selected page
-# ============================================================
-
 if st.session_state.page == "home":
     home_page()
-
 elif st.session_state.page == "write_list":
     professor_list_page("write")
-
 elif st.session_state.page == "see_list":
     professor_list_page("see")
-
 elif st.session_state.page == "write_review":
     write_review_page()
-
 elif st.session_state.page == "check_rating":
     check_rating_page()
-
 elif st.session_state.page == "show_reviews":
     show_reviews_page()
-
 else:
     st.session_state.page = "home"
     st.rerun()
