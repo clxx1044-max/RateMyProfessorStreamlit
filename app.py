@@ -440,26 +440,35 @@ def save_review_to_db(name, review, final_rating, auto_rating, rating_type):
 
 
 def get_reviews_for_professor(name):
-    st.write("Connecting to Firestore...")
+    if db is None:
+        st.error("Firebase is not connected.")
+        return []
 
     try:
-        docs = db.collection("reviews").limit(1).stream()
+        st.write("Connecting to Firestore...")
 
-        st.write("Stream created.")
+        docs = (
+            db.collection("reviews")
+            .where("professor", "==", name)
+            .limit(20)
+            .get(timeout=10)
+        )
+
+        st.write("Finished Firestore request.")
 
         results = []
 
-        for d in docs:
-            st.write("Read one document.")
-            results.append(d.to_dict())
+        for doc in docs:
+            results.append(doc.to_dict())
 
-        st.write("Finished reading.")
+        st.write("Loaded this many reviews:", len(results))
+
         return results
 
-    except Exception as e:
-        st.exception(e)
+    except Exception as error:
+        st.error("Could not load reviews.")
+        st.exception(error)
         return []
-
 
 # ============================================================
 # Pages
