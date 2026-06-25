@@ -8,7 +8,7 @@ import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
 
-
+os.environ["GOOGLE_CLOUD_DISABLE_GRPC"] = "true"
 # ============================================================
 # Page setup
 # ============================================================
