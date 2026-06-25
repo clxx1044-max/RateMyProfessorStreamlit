@@ -460,6 +460,11 @@ def get_reviews_for_professor(name):
 
     except Exception as error:
         st.error("Could not load reviews.")
+        st.exception(error)
+        return []
+
+    except Exception as error:
+        st.error("Could not load reviews.")
         st.code(str(error))
         return []
 
