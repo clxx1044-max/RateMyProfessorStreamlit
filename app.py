@@ -641,8 +641,7 @@ def show_reviews_page():
 
     back_button("see_list")
 
-    with st.spinner("Loading reviews..."):
-        reviews = get_reviews_for_professor(name)
+    reviews = get_reviews_for_professor(name)
 
     if len(reviews) == 0:
         st.info("No reviews yet.")
