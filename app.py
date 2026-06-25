@@ -445,27 +445,19 @@ def get_reviews_for_professor(name):
         return []
 
     try:
-        reviews = db.collection("reviews").where(
-            "professor",
-            "==",
-            name
-        ).stream()
+        docs = db.collection("reviews").where("professor", "==", name).limit(20).stream()
 
         results = []
 
-        for review in reviews:
-            results.append(review.to_dict())
+        for doc in docs:
+            st.write("Found one document")
+            results.append(doc.to_dict())
 
         return results
 
     except Exception as error:
         st.error("Could not load reviews.")
         st.exception(error)
-        return []
-
-    except Exception as error:
-        st.error("Could not load reviews.")
-        st.code(str(error))
         return []
 
 
@@ -644,7 +636,11 @@ def show_reviews_page():
 
     st.write("Loading reviews...")
 
+    st.write("Trying to load reviews for:", name)
+
     reviews = get_reviews_for_professor(name)
+
+    st.write("Loaded this many reviews:", len(reviews))
 
     st.write("Finished loading reviews.")
 
