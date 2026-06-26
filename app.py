@@ -168,7 +168,7 @@ def add_background():
         <style>
         .stApp {{
             background-image:
-                linear-gradient(rgba(0,0,0,0.58), rgba(0,0,0,0.58)),
+                linear-gradient(rgba(245,248,252,0.35), rgba(220,228,238,0.45)),
                 url("data:image/jpg;base64,{encoded}");
             background-size: cover;
             background-position: center;
@@ -180,37 +180,81 @@ def add_background():
         }}
 
         .main-box {{
-            background: rgba(18, 18, 18, 0.72);
+            background: rgba(255,255,255,0.90);
             padding: 25px;
-            border-radius: 14px;
-            border: 2px solid rgba(255,255,255,0.25);
-            backdrop-filter: blur(4px);
+            border-radius: 16px;
+            border: 1px solid #d5dce5;
+            backdrop-filter: blur(8px);
+            color: black;
         }}
 
         .review-card {{
-            background: rgba(0, 0, 0, 0.58);
-            padding: 25px;
+            background: #f7f9fc;
+            color: black;
+            padding: 22px;
             border-radius: 14px;
-            border: 1px solid rgba(255,255,255,0.25);
-            margin-bottom: 22px;
+            border: 1px solid #d7dde6;
+            margin-bottom: 20px;
         }}
 
         .average-box {{
-            background: rgba(0, 85, 40, 0.82);
+            background: #2e8b57;
+            color: white;
             padding: 24px;
             border-radius: 14px;
             font-size: 26px;
             font-weight: bold;
-            border: 1px solid rgba(255,255,255,0.28);
+            text-align: center;
             margin-top: 20px;
         }}
 
-        h1, h2, h3, label, p {{
-            color: white !important;
+        h1, h2, h3, h4, p, label, span {{
+            color: black !important;
         }}
 
-        .stMarkdown, .stText, .stWrite, div {{
+        .stMarkdown,
+        .stText,
+        .stWrite {{
+            color: black !important;
+        }}
+
+        .stSelectbox div[data-baseweb="select"] > div {{
+            background: white !important;
+            color: black !important;
+        }}
+
+        .stTextArea textarea {{
+            background: white !important;
+            color: black !important;
+        }}
+
+        .stNumberInput input {{
+            background: white !important;
+            color: black !important;
+        }}
+
+        .stRadio label {{
+            color: black !important;
+        }}
+
+        .stButton > button {{
+            background: #1f77b4;
             color: white;
+            border-radius: 10px;
+            border: none;
+            font-weight: bold;
+        }}
+
+        .stButton > button:hover {{
+            background: #1565a8;
+        }}
+
+        section[data-testid="stSidebar"] {{
+            background: #eef3f8;
+        }}
+
+        section[data-testid="stSidebar"] * {{
+            color: black !important;
         }}
         </style>
         """,
