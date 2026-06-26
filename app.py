@@ -1,5 +1,4 @@
 import os
-import json
 import base64
 from datetime import datetime
 
@@ -39,6 +38,7 @@ def start_firebase():
 
     st.error("Firebase key not found.")
     st.stop()
+
 
 db = start_firebase()
 
@@ -167,7 +167,9 @@ def add_background():
         f"""
         <style>
         .stApp {{
-            background-image: url("data:image/jpg;base64,{encoded}");
+            background-image:
+                linear-gradient(rgba(0,0,0,0.58), rgba(0,0,0,0.58)),
+                url("data:image/jpg;base64,{encoded}");
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
@@ -178,13 +180,36 @@ def add_background():
         }}
 
         .main-box {{
-            background: rgba(242, 242, 242, 0.94);
+            background: rgba(18, 18, 18, 0.72);
             padding: 25px;
-            border-radius: 12px;
-            border: 2px solid #cccccc;
+            border-radius: 14px;
+            border: 2px solid rgba(255,255,255,0.25);
+            backdrop-filter: blur(4px);
+        }}
+
+        .review-card {{
+            background: rgba(0, 0, 0, 0.58);
+            padding: 25px;
+            border-radius: 14px;
+            border: 1px solid rgba(255,255,255,0.25);
+            margin-bottom: 22px;
+        }}
+
+        .average-box {{
+            background: rgba(0, 85, 40, 0.82);
+            padding: 24px;
+            border-radius: 14px;
+            font-size: 26px;
+            font-weight: bold;
+            border: 1px solid rgba(255,255,255,0.28);
+            margin-top: 20px;
         }}
 
         h1, h2, h3, label, p {{
+            color: white !important;
+        }}
+
+        .stMarkdown, .stText, .stWrite, div {{
             color: white;
         }}
         </style>
@@ -232,8 +257,8 @@ add_background()
 
 st.markdown(
     """
-    <div style='text-align:center; background-color:#dce6ef; padding:15px; border-radius:12px;'>
-        <h1 style='color:#071b3a; font-size:58px;'>Rate My Professor</h1>
+    <div style='text-align:center; background-color:rgba(220,230,239,0.95); padding:15px; border-radius:12px;'>
+        <h1 style='color:#071b3a !important; font-size:58px;'>Rate My Professor</h1>
     </div>
     """,
     unsafe_allow_html=True
@@ -281,28 +306,42 @@ if page == "See Reviews":
                     total_rating += rating
                     rating_count += 1
 
-                    with st.container(border=True):
-                        st.markdown("### Review " + str(number))
-                        st.write(
-                            "**Rating:** "
-                            + str(rating)
-                            + "/5 "
-                            + g_str(rating)
-                            + " ("
-                            + rating_type
-                            + ")"
-                        )
+                    st.markdown("<div class='review-card'>", unsafe_allow_html=True)
 
-                        if rating_type == "Manual":
-                            old_auto_rating = data.get("automatic_rating", "Unknown")
-                            st.write("Automatic rating was: " + str(old_auto_rating) + "/5")
+                    st.markdown("### Review " + str(number))
 
-                        st.write(review_words)
+                    st.write(
+                        "**Rating:** "
+                        + str(rating)
+                        + "/5 "
+                        + g_str(rating)
+                        + " ("
+                        + rating_type
+                        + ")"
+                    )
+
+                    if rating_type == "Manual":
+                        old_auto_rating = data.get("automatic_rating", "Unknown")
+                        st.write("Automatic rating was: " + str(old_auto_rating) + "/5")
+
+                    st.write(review_words)
+
+                    st.markdown("</div>", unsafe_allow_html=True)
 
                 average = total_rating / rating_count
                 average = round(average * 2) / 2
 
-                st.success("Average Rating: " + str(average) + "/5 " + g_str(average))
+                st.markdown(
+                    "<div class='average-box'>"
+                    + "Average Rating: "
+                    + str(average)
+                    + "/5 "
+                    + g_str(average)
+                    + "<br>Total Reviews: "
+                    + str(rating_count)
+                    + "</div>",
+                    unsafe_allow_html=True
+                )
 
         except Exception as error:
             st.error("Could not load reviews.")
