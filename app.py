@@ -27,15 +27,18 @@ def start_firebase():
         firebase_admin.initialize_app(cred)
         return firestore.client()
 
-    if "firebase_json" in st.secrets:
-        firebase_info = json.loads(st.secrets["firebase_json"])
+    if "firebase" in st.secrets:
+        firebase_info = dict(st.secrets["firebase"])
+
+        if "private_key" in firebase_info:
+            firebase_info["private_key"] = firebase_info["private_key"].replace("\\n", "\n")
+
         cred = credentials.Certificate(firebase_info)
         firebase_admin.initialize_app(cred)
         return firestore.client()
 
-    st.error("Firebase key not found. Add serviceAccountKey.json locally or firebase_json in Streamlit secrets.")
+    st.error("Firebase key not found.")
     st.stop()
-
 
 db = start_firebase()
 
