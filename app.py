@@ -1,8 +1,6 @@
-import base64
 import os
-
-# This must be set before importing firebase/firestore.
-os.environ["GOOGLE_CLOUD_DISABLE_GRPC"] = "true"
+import base64
+from datetime import datetime
 
 import streamlit as st
 from textblob import TextBlob
@@ -12,232 +10,47 @@ from firebase_admin import credentials
 from firebase_admin import firestore
 
 
-st.set_page_config(
-    page_title="Rate My Professor",
-    page_icon="⭐",
-    layout="centered"
-)
+# -----------------------------
+# Basic page setup
+# -----------------------------
+st.set_page_config(page_title="Rate My Professor", page_icon="⭐", layout="wide")
+
+folder = os.path.dirname(os.path.abspath(__file__))
+key_file = os.path.join(folder, "serviceAccountKey.json")
+background_file = os.path.join(folder, "background.jpg")
 
 
-def load_background():
-    folder = os.path.dirname(os.path.abspath(__file__))
-    background_file = os.path.join(folder, "background.jpg")
+# -----------------------------
+# Firebase setup
+# -----------------------------
+def start_firebase():
+    if firebase_admin._apps:
+        return firestore.client()
 
-    if os.path.exists(background_file):
-        with open(background_file, "rb") as image_file:
-            encoded_image = base64.b64encode(image_file.read()).decode()
+    # Option 1: local file, useful on your own computer
+    if os.path.exists(key_file):
+        cred = credentials.Certificate(key_file)
+        firebase_admin.initialize_app(cred)
+        return firestore.client()
 
-        st.markdown(
-            f"""
-            <style>
-            .stApp {{
-                background-image:
-                    linear-gradient(rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.35)),
-                    url("data:image/jpg;base64,{encoded_image}");
-                background-size: cover;
-                background-position: center;
-                background-attachment: fixed;
-            }}
-            </style>
-            """,
-            unsafe_allow_html=True
-        )
-    else:
-        st.markdown(
-            """
-            <style>
-            .stApp {
-                background: linear-gradient(135deg, #dce6ef, #ffffff);
-            }
-            </style>
-            """,
-            unsafe_allow_html=True
-        )
+    # Option 2: Streamlit Cloud secrets, useful after deployment
+    if "firebase" in st.secrets:
+        firebase_info = dict(st.secrets["firebase"])
+        cred = credentials.Certificate(firebase_info)
+        firebase_admin.initialize_app(cred)
+        return firestore.client()
+
+    st.error("Firebase key not found. Put serviceAccountKey.json in the same folder as app.py, or add it to Streamlit secrets.")
+    st.stop()
 
 
-def load_css():
-    st.markdown(
-        """
-        <style>
-        html, body, [class*="css"] {
-            font-family: "Times New Roman", serif;
-        }
-
-        .block-container {
-            padding-top: 2.5rem;
-            padding-bottom: 3rem;
-        }
-
-        .main-title {
-            background-color: #dce6ef;
-            color: #071b3a;
-            text-align: center;
-            font-size: 76px;
-            font-weight: bold;
-            padding: 18px 30px;
-            border-radius: 10px;
-            margin-top: 35px;
-            margin-bottom: 50px;
-            border: 3px solid rgba(7, 27, 58, 0.2);
-            box-shadow: 0 6px 18px rgba(0,0,0,0.18);
-        }
-
-        .page-title {
-            background-color: #dce6ef;
-            color: #071b3a;
-            text-align: center;
-            font-size: 44px;
-            font-weight: bold;
-            padding: 12px 24px;
-            border-radius: 10px;
-            margin-top: 20px;
-            margin-bottom: 30px;
-            border: 3px solid rgba(7, 27, 58, 0.2);
-            box-shadow: 0 6px 18px rgba(0,0,0,0.18);
-        }
-
-        .section-title {
-            color: #5c258d;
-            background-color: rgba(242, 242, 242, 0.72);
-            border-radius: 8px;
-            font-size: 32px;
-            font-weight: bold;
-            text-align: center;
-            margin-top: 26px;
-            margin-bottom: 12px;
-            padding: 8px;
-        }
-
-        .rating-big {
-            color: #5c258d;
-            background-color: rgba(242, 242, 242, 0.90);
-            border: 3px ridge #999;
-            border-radius: 10px;
-            font-size: 42px;
-            font-weight: bold;
-            text-align: center;
-            margin: 20px 0;
-            padding: 20px;
-        }
-
-        .review-card {
-            background-color: rgba(255,255,255,0.94);
-            border: 2px solid #cccccc;
-            border-radius: 8px;
-            padding: 18px;
-            margin: 16px 0;
-            color: #071b3a;
-            font-family: Arial, sans-serif;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-        }
-
-        .review-card h2 {
-            margin-top: 0;
-            color: #071b3a;
-            font-family: "Times New Roman", serif;
-        }
-
-        .average-box {
-            background-color: #dce6ef;
-            border: 2px solid #071b3a;
-            border-radius: 8px;
-            padding: 18px;
-            margin-top: 25px;
-            color: #071b3a;
-            font-size: 28px;
-            font-weight: bold;
-            text-align: center;
-        }
-
-        .info-box {
-            background-color: rgba(242, 242, 242, 0.90);
-            border: 3px ridge #999;
-            border-radius: 10px;
-            padding: 22px;
-            margin-top: 20px;
-            margin-bottom: 20px;
-            color: #071b3a;
-            text-align: center;
-            box-shadow: 0 6px 18px rgba(0,0,0,0.18);
-        }
-
-        .small-note {
-            color: white;
-            font-size: 15px;
-            text-align: center;
-        }
-
-        div.stButton > button {
-            background-color: white;
-            color: #071b3a;
-            border: 2px solid #071b3a;
-            border-radius: 8px;
-            font-family: "Times New Roman", serif;
-            font-size: 22px;
-            font-weight: bold;
-            padding: 10px 18px;
-            margin-top: 8px;
-            margin-bottom: 8px;
-        }
-
-        div.stButton > button:hover {
-            background-color: #dce6ef;
-            color: #071b3a;
-            border: 2px solid #071b3a;
-        }
-
-        textarea {
-            font-family: Arial, sans-serif !important;
-            font-size: 18px !important;
-        }
-
-        .stMarkdown, .stText, p, label {
-            color: white;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
+db = start_firebase()
 
 
-load_background()
-load_css()
-
-
-@st.cache_resource
-def get_database():
-    if not firebase_admin._apps:
-        folder = os.path.dirname(os.path.abspath(__file__))
-        key_file = os.path.join(folder, "serviceAccountKey.json")
-
-        secret_data = None
-
-        try:
-            if "firebase_service_account" in st.secrets:
-                secret_data = dict(st.secrets["firebase_service_account"])
-        except Exception:
-            secret_data = None
-
-        if secret_data is not None:
-            cred = credentials.Certificate(secret_data)
-            firebase_admin.initialize_app(cred)
-        elif os.path.exists(key_file):
-            cred = credentials.Certificate(key_file)
-            firebase_admin.initialize_app(cred)
-        else:
-            st.error(
-                "Firebase is not connected. Add serviceAccountKey.json next to app.py "
-                "or add Firebase credentials in Streamlit Secrets."
-            )
-            return None
-
-    return firestore.client()
-
-
-db = get_database()
-
-
-professors = [
+# -----------------------------
+# Data
+# -----------------------------
+list1 = [
     "IST:",
     "Aileen Aizenshtat",
     "AJ LaConte",
@@ -260,6 +73,7 @@ professors = [
     "Nhan Nguyen",
     "Pedro Goncalves de Paiva",
     "Rapunzel Chen",
+
     "PLE:",
     "Diego Martinez Rios",
     "Josie Morrison",
@@ -278,6 +92,7 @@ professors = [
     "Taisei Ishikawa",
     "Taylor Craig",
     "Zeeshan Ali",
+
     "SGC:",
     "Bamlak Aklilu",
     "Divin Dushimimana",
@@ -297,10 +112,26 @@ professors = [
     "Vitoria Souza Reyes"
 ]
 
+professors = []
+sections = {}
+current_section = "Other"
 
+for item in list1:
+    if item.endswith(":"):
+        current_section = item.replace(":", "")
+        sections[current_section] = []
+    else:
+        professors.append(item)
+        sections[current_section].append(item)
+
+
+# -----------------------------
+# Small helper functions
+# -----------------------------
 def g_rat(review):
     blob = TextBlob(review)
     polarity = blob.sentiment.polarity
+
     rating = (polarity + 1) * 2.5
     words = review.lower()
 
@@ -321,271 +152,188 @@ def g_rat(review):
 
 
 def g_str(rating):
+    try:
+        rating = float(rating)
+    except Exception:
+        return "No stars"
+
     full_stars = int(rating)
     half_star = rating - full_stars
     stars = "★" * full_stars
 
     if half_star == 0.5:
-        stars = stars + "½"
+        stars += "½"
     if stars == "":
         stars = "No stars"
 
     return stars
 
 
-def setup_state():
-    if "page" not in st.session_state:
-        st.session_state.page = "home"
-    if "chosen_professor" not in st.session_state:
-        st.session_state.chosen_professor = ""
-    if "current_review" not in st.session_state:
-        st.session_state.current_review = ""
-    if "auto_rating" not in st.session_state:
-        st.session_state.auto_rating = 0.0
-    if "success_message" not in st.session_state:
-        st.session_state.success_message = ""
+def add_background():
+    if not os.path.exists(background_file):
+        return
 
-
-def go_to(page_name):
-    st.session_state.page = page_name
-    st.rerun()
-
-
-def choose_professor(page_name, professor_name):
-    st.session_state.chosen_professor = professor_name
-    st.session_state.page = page_name
-    st.rerun()
-
-
-def show_success_message():
-    if st.session_state.success_message != "":
-        st.success(st.session_state.success_message)
-        st.session_state.success_message = ""
-
-
-def back_button(target_page):
-    if st.button("Back"):
-        go_to(target_page)
-
-
-setup_state()
-
-
-def save_review_to_db(name, review, final_rating, auto_rating, rating_type):
-    if db is None:
-        st.error("Firebase is not connected.")
-        return False
-
-    try:
-        db.collection("reviews").add({
-            "professor": name,
-            "review": review,
-            "rating": final_rating,
-            "automatic_rating": auto_rating,
-            "rating_type": rating_type,
-            "created_at": firestore.SERVER_TIMESTAMP
-        })
-        return True
-    except Exception as error:
-        st.error("The review could not be saved.")
-        st.exception(error)
-        return False
-
-
-def get_reviews_for_professor(name):
-    if db is None:
-        st.error("Firebase is not connected.")
-        return []
-
-    try:
-        docs = (
-            db.collection("reviews")
-            .where("professor", "==", name)
-            .limit(20)
-            .get(timeout=10)
-        )
-
-        results = []
-        for doc in docs:
-            results.append(doc.to_dict())
-        return results
-
-    except Exception as error:
-        st.error("Could not load reviews.")
-        st.exception(error)
-        return []
-
-
-def home_page():
-    st.markdown('<div class="main-title">Rate My Professor</div>', unsafe_allow_html=True)
-    show_success_message()
-
-    left, middle, right = st.columns([1, 2, 1])
-    with middle:
-        if st.button("💬  See Reviews"):
-            go_to("see_list")
-        if st.button("✎  Write Reviews"):
-            go_to("write_list")
-
-
-def professor_list_page(mode):
-    if mode == "write":
-        st.markdown('<div class="page-title">Choose a Professor to Review</div>', unsafe_allow_html=True)
-    else:
-        st.markdown('<div class="page-title">Choose a Professor to View Reviews</div>', unsafe_allow_html=True)
-
-    back_button("home")
-
-    for item in professors:
-        if item.endswith(":"):
-            st.markdown(f'<div class="section-title">{item}</div>', unsafe_allow_html=True)
-        else:
-            if mode == "write":
-                if st.button(item, key="write_" + item):
-                    choose_professor("write_review", item)
-            else:
-                if st.button(item, key="see_" + item):
-                    choose_professor("show_reviews", item)
-
-
-def write_review_page():
-    name = st.session_state.chosen_professor
-    st.markdown(f'<div class="page-title">Leave a review for {name}</div>', unsafe_allow_html=True)
-    back_button("write_list")
-
-    review = st.text_area("Write your review here:", height=260, key="review_text_area")
-
-    if st.button("Submit Review"):
-        review = review.strip()
-        if review == "":
-            st.warning("Please write a review first.")
-        else:
-            auto_rating = g_rat(review)
-            st.session_state.current_review = review
-            st.session_state.auto_rating = auto_rating
-            st.session_state.page = "check_rating"
-            st.rerun()
-
-
-def check_rating_page():
-    name = st.session_state.chosen_professor
-    review = st.session_state.current_review
-    auto_rating = st.session_state.auto_rating
-
-    st.markdown('<div class="page-title">Check the Automatic Rating</div>', unsafe_allow_html=True)
-    back_button("write_review")
+    with open(background_file, "rb") as image_file:
+        encoded = base64.b64encode(image_file.read()).decode()
 
     st.markdown(
-        """
-        <div class="info-box">
-            <h3>The programme gave this review:</h3>
-        </div>
+        f"""
+        <style>
+        .stApp {{
+            background-image: url("data:image/jpg;base64,{encoded}");
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }}
+        .main-box {{
+            background: rgba(242, 242, 242, 0.92);
+            padding: 25px;
+            border-radius: 12px;
+            border: 2px solid #cccccc;
+        }}
+        </style>
         """,
         unsafe_allow_html=True
     )
 
-    st.markdown(f'<div class="rating-big">{auto_rating}/5 {g_str(auto_rating)}</div>', unsafe_allow_html=True)
-    st.write("Do you agree with this rating?")
 
-    if st.button("Yes, use this automatic rating"):
-        saved = save_review_to_db(name, review, auto_rating, auto_rating, "Automatic")
-        if saved:
-            st.session_state.success_message = "Your review was submitted. Final rating: " + str(auto_rating) + "/5"
-            go_to("home")
+@st.cache_data(ttl=10)
+def load_reviews(professor_name):
+    docs = db.collection("reviews").where("professor", "==", professor_name).stream()
 
-    st.subheader("Or give your own rating:")
-    manual_rating = st.number_input(
-        "Manual rating",
-        min_value=0.0,
-        max_value=5.0,
-        step=0.5,
-        value=float(auto_rating)
-    )
+    results = []
+    for doc in docs:
+        data = doc.to_dict()
+        results.append(data)
 
-    if st.button("Submit My Rating"):
-        manual_rating = round(manual_rating * 2) / 2
-        saved = save_review_to_db(name, review, manual_rating, auto_rating, "Manual")
-        if saved:
-            st.session_state.success_message = "Your review was submitted. Final rating: " + str(manual_rating) + "/5"
-            go_to("home")
-
-    st.markdown(
-        '<p class="small-note">Use a number from 0 to 5, like 1, 2.5, 4, or 5.</p>',
-        unsafe_allow_html=True
-    )
+    return results
 
 
-def show_reviews_page():
-    name = st.session_state.chosen_professor
-    st.markdown(f'<div class="page-title">{name} Reviews</div>', unsafe_allow_html=True)
-    back_button("see_list")
+def save_review(professor_name, review, final_rating, auto_rating, rating_type):
+    db.collection("reviews").add({
+        "professor": professor_name,
+        "review": review,
+        "rating": float(final_rating),
+        "automatic_rating": float(auto_rating),
+        "rating_type": rating_type,
+        "created_at": firestore.SERVER_TIMESTAMP,
+        "created_local": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    })
+    load_reviews.clear()
 
-    reviews = get_reviews_for_professor(name)
 
-    if len(reviews) == 0:
-        st.info("No reviews yet.")
-        return
+# -----------------------------
+# App design
+# -----------------------------
+add_background()
 
-    number = 1
-    total_rating = 0
+st.markdown(
+    """
+    <div style='text-align:center; background-color:#dce6ef; padding:15px; border-radius:12px;'>
+        <h1 style='color:#071b3a; font-size:58px;'>Rate My Professor</h1>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
-    for data in reviews:
-        review_text = data.get("review", "")
-        rating = data.get("rating")
+st.write("")
 
-        if rating is None:
-            rating = g_rat(review_text)
+page = st.sidebar.radio("Choose one", ["See Reviews", "Write Reviews"])
 
-        rating_type = data.get("rating_type", "Automatic")
+
+# -----------------------------
+# See reviews page
+# -----------------------------
+if page == "See Reviews":
+    st.markdown("<div class='main-box'>", unsafe_allow_html=True)
+    st.header("See Reviews")
+
+    chosen_professor = st.selectbox("Choose a professor", professors)
+
+    if st.button("Load Reviews"):
+        st.session_state["show_professor"] = chosen_professor
+
+    if "show_professor" in st.session_state:
+        name = st.session_state["show_professor"]
+        st.subheader(name + " Reviews")
 
         try:
-            rating = float(rating)
-        except Exception:
-            rating = g_rat(review_text)
+            reviews = load_reviews(name)
 
-        total_rating = total_rating + rating
+            if len(reviews) == 0:
+                st.info("No reviews yet.")
+            else:
+                total_rating = 0
+                rating_count = 0
 
-        review_html = f"""
-        <div class="review-card">
-            <h2>Review {number}</h2>
-            <p><strong>Rating:</strong> {rating}/5 {g_str(rating)} ({rating_type})</p>
-        """
+                for number, data in enumerate(reviews, start=1):
+                    review_words = data.get("review", "")
 
-        if rating_type == "Manual":
-            old_auto_rating = data.get("automatic_rating", "Unknown")
-            review_html += f"""
-            <p><strong>Automatic rating was:</strong> {old_auto_rating}/5</p>
-            """
+                    try:
+                        rating = float(data.get("rating", g_rat(review_words)))
+                    except Exception:
+                        rating = g_rat(review_words)
 
-        review_html += f"""
-            <p>{review_text}</p>
-        </div>
-        """
+                    rating_type = data.get("rating_type", "Automatic")
+                    total_rating += rating
+                    rating_count += 1
 
-        st.markdown(review_html, unsafe_allow_html=True)
-        number = number + 1
+                    with st.container(border=True):
+                        st.markdown("### Review " + str(number))
+                        st.write("**Rating:** " + str(rating) + "/5 " + g_str(rating) + " (" + rating_type + ")")
 
-    average = total_rating / (number - 1)
-    average = round(average * 2) / 2
+                        if rating_type == "Manual":
+                            old_auto_rating = data.get("automatic_rating", "Unknown")
+                            st.write("Automatic rating was: " + str(old_auto_rating) + "/5")
 
-    st.markdown(
-        f'<div class="average-box">Average Rating: {average}/5 {g_str(average)}</div>',
-        unsafe_allow_html=True
-    )
+                        st.write(review_words)
+
+                average = total_rating / rating_count
+                average = round(average * 2) / 2
+                st.success("Average Rating: " + str(average) + "/5 " + g_str(average))
+
+        except Exception as error:
+            st.error("Could not load reviews.")
+            st.code(str(error))
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
-if st.session_state.page == "home":
-    home_page()
-elif st.session_state.page == "write_list":
-    professor_list_page("write")
-elif st.session_state.page == "see_list":
-    professor_list_page("see")
-elif st.session_state.page == "write_review":
-    write_review_page()
-elif st.session_state.page == "check_rating":
-    check_rating_page()
-elif st.session_state.page == "show_reviews":
-    show_reviews_page()
-else:
-    st.session_state.page = "home"
-    st.rerun()
+# -----------------------------
+# Write reviews page
+# -----------------------------
+if page == "Write Reviews":
+    st.markdown("<div class='main-box'>", unsafe_allow_html=True)
+    st.header("Write a Review")
+
+    chosen_professor = st.selectbox("Choose a professor", professors)
+    review_text = st.text_area("Write your review", height=180)
+
+    if review_text.strip() != "":
+        auto_rating = g_rat(review_text)
+        st.write("Automatic rating: **" + str(auto_rating) + "/5 " + g_str(auto_rating) + "**")
+    else:
+        auto_rating = 0
+
+    rating_choice = st.radio("Which rating do you want to use?", ["Use automatic rating", "Use my own rating"])
+
+    if rating_choice == "Use automatic rating":
+        final_rating = auto_rating
+        rating_type = "Automatic"
+    else:
+        final_rating = st.number_input("Your rating", min_value=0.0, max_value=5.0, value=float(auto_rating), step=0.5)
+        rating_type = "Manual"
+
+    if st.button("Submit Review"):
+        if review_text.strip() == "":
+            st.warning("Please write a review first.")
+        else:
+            try:
+                final_rating = round(float(final_rating) * 2) / 2
+                save_review(chosen_professor, review_text.strip(), final_rating, auto_rating, rating_type)
+                st.success("Your review was submitted. Final rating: " + str(final_rating) + "/5")
+            except Exception as error:
+                st.error("The review could not be saved.")
+                st.code(str(error))
+
+    st.markdown("</div>", unsafe_allow_html=True)
