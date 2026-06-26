@@ -36,13 +36,7 @@ def start_firebase():
 
 
 db = start_firebase()
-st.write("Firebase app started")
-try:
-    test_docs = db.collection("reviews").limit(1).get(timeout=5)
-    st.success("Firebase test worked")
-except Exception as e:
-    st.error("Firebase test failed")
-    st.code(str(e))
+
 
 list1 = [
     "IST:",
