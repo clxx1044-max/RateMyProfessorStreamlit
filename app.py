@@ -1,4 +1,5 @@
 import os
+import json
 import base64
 from datetime import datetime
 
@@ -6,7 +7,8 @@ import streamlit as st
 from textblob import TextBlob
 
 import firebase_admin
-from firebase_admin import credentials, firestore
+from firebase_admin import credentials
+from firebase_admin import firestore
 
 
 st.set_page_config(page_title="Rate My Professor", page_icon="⭐", layout="wide")
@@ -25,13 +27,13 @@ def start_firebase():
         firebase_admin.initialize_app(cred)
         return firestore.client()
 
-    if "firebase" in st.secrets:
-        firebase_info = dict(st.secrets["firebase"])
+    if "firebase_json" in st.secrets:
+        firebase_info = json.loads(st.secrets["firebase_json"])
         cred = credentials.Certificate(firebase_info)
         firebase_admin.initialize_app(cred)
         return firestore.client()
 
-    st.error("Firebase key not found.")
+    st.error("Firebase key not found. Add serviceAccountKey.json locally or firebase_json in Streamlit secrets.")
     st.stop()
 
 
@@ -40,29 +42,68 @@ db = start_firebase()
 
 list1 = [
     "IST:",
-    "Aileen Aizenshtat", "AJ LaConte", "Alex Korablev", "Anne Eta",
-    "Antara Bajaj", "Anushka Chandran", "Brandon Yang", "Charnice Hoegnifioh",
-    "Ezra Laufenberg", "Frank Petty", "Gabriela Rodrigues de Morais",
-    "Galiya Askarova", "Hillary Babalola", "Joseph Elsayyid",
-    "Kayla Hightower", "Kevin Patterson", "Micah Okwah", "Nathan Beyene",
-    "Nhan Nguyen", "Pedro Goncalves de Paiva", "Rapunzel Chen",
+    "Aileen Aizenshtat",
+    "AJ LaConte",
+    "Alex Korablev",
+    "Anne Eta",
+    "Antara Bajaj",
+    "Anushka Chandran",
+    "Brandon Yang",
+    "Charnice Hoegnifioh",
+    "Ezra Laufenberg",
+    "Frank Petty",
+    "Gabriela Rodrigues de Morais",
+    "Galiya Askarova",
+    "Hillary Babalola",
+    "Joseph Elsayyid",
+    "Kayla Hightower",
+    "Kevin Patterson",
+    "Micah Okwah",
+    "Nathan Beyene",
+    "Nhan Nguyen",
+    "Pedro Goncalves de Paiva",
+    "Rapunzel Chen",
 
     "PLE:",
-    "Diego Martinez Rios", "Josie Morrison", "Liam Heraty", "Liza Sadaterashvili",
-    "Andrey Sokolov", "Angela Hummingbird", "Christian Thomas", "David Johnson",
-    "Jada Wilson", "Karolina Kedzia", "Lauren Johnson", "Paula Garcia",
-    "Polina Protozanova", "Sherry Huang", "Taisei Ishikawa", "Taylor Craig",
+    "Diego Martinez Rios",
+    "Josie Morrison",
+    "Liam Heraty",
+    "Liza Sadaterashvili",
+    "Andrey Sokolov",
+    "Angela Hummingbird",
+    "Christian Thomas",
+    "David Johnson",
+    "Jada Wilson",
+    "Karolina Kedzia",
+    "Lauren Johnson",
+    "Paula Garcia",
+    "Polina Protozanova",
+    "Sherry Huang",
+    "Taisei Ishikawa",
+    "Taylor Craig",
     "Zeeshan Ali",
 
     "SGC:",
-    "Bamlak Aklilu", "Divin Dushimimana", "Esha Akhtar", "James Obasiolu",
-    "Breanna Ellison", "Camila Pantoja", "Christina Oh", "Henry Vo",
-    "Kadiatou Keita", "Melanie Trotochaud", "Olivia Birney", "Phoebe Yeh",
-    "Raquel Mandojana", "Rebecca McMillin-Hastings", "Salaar Ali",
+    "Bamlak Aklilu",
+    "Divin Dushimimana",
+    "Esha Akhtar",
+    "James Obasiolu",
+    "Breanna Ellison",
+    "Camila Pantoja",
+    "Christina Oh",
+    "Henry Vo",
+    "Kadiatou Keita",
+    "Melanie Trotochaud",
+    "Olivia Birney",
+    "Phoebe Yeh",
+    "Raquel Mandojana",
+    "Rebecca McMillin-Hastings",
+    "Salaar Ali",
     "Vitoria Souza Reyes"
 ]
 
 professors = []
+
 for item in list1:
     if not item.endswith(":"):
         professors.append(item)
@@ -71,6 +112,7 @@ for item in list1:
 def g_rat(review):
     blob = TextBlob(review)
     polarity = blob.sentiment.polarity
+
     rating = (polarity + 1) * 2.5
     words = review.lower()
 
@@ -87,6 +129,7 @@ def g_rat(review):
 
     rating = round(rating * 2) / 2
     rating = max(0, min(5, rating))
+
     return rating
 
 
@@ -96,11 +139,12 @@ def g_str(rating):
     except Exception:
         return "No stars"
 
-    full = int(rating)
-    half = rating - full
-    stars = "★" * full
+    full_stars = int(rating)
+    half_star = rating - full_stars
 
-    if half == 0.5:
+    stars = "★" * full_stars
+
+    if half_star == 0.5:
         stars += "½"
 
     if stars == "":
@@ -136,6 +180,10 @@ def add_background():
             border-radius: 12px;
             border: 2px solid #cccccc;
         }}
+
+        h1, h2, h3, label, p {{
+            color: white;
+        }}
         </style>
         """,
         unsafe_allow_html=True
@@ -150,25 +198,29 @@ def load_reviews(professor_name):
         db.collection("reviews")
         .where("professor", "==", professor_name)
         .limit(100)
-        .stream(timeout=8)
+        .stream(timeout=10)
     )
 
     for doc in docs:
-        results.append(doc.to_dict())
+        data = doc.to_dict()
+        results.append(data)
 
     return results
 
 
 def save_review(professor_name, review, final_rating, auto_rating, rating_type):
-    db.collection("reviews").add({
-        "professor": professor_name,
-        "review": review,
-        "rating": float(final_rating),
-        "automatic_rating": float(auto_rating),
-        "rating_type": rating_type,
-        "created_at": firestore.SERVER_TIMESTAMP,
-        "created_local": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    }, timeout=8)
+    db.collection("reviews").add(
+        {
+            "professor": professor_name,
+            "review": review,
+            "rating": float(final_rating),
+            "automatic_rating": float(auto_rating),
+            "rating_type": rating_type,
+            "created_at": firestore.SERVER_TIMESTAMP,
+            "created_local": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        },
+        timeout=10
+    )
 
     load_reviews.clear()
 
@@ -191,6 +243,7 @@ page = st.sidebar.radio("Choose one", ["See Reviews", "Write Reviews"])
 
 if page == "See Reviews":
     st.markdown("<div class='main-box'>", unsafe_allow_html=True)
+
     st.header("See Reviews")
 
     chosen_professor = st.selectbox("Choose a professor", professors)
@@ -238,17 +291,18 @@ if page == "See Reviews":
                         )
 
                         if rating_type == "Manual":
-                            old_auto = data.get("automatic_rating", "Unknown")
-                            st.write("Automatic rating was: " + str(old_auto) + "/5")
+                            old_auto_rating = data.get("automatic_rating", "Unknown")
+                            st.write("Automatic rating was: " + str(old_auto_rating) + "/5")
 
                         st.write(review_words)
 
                 average = total_rating / rating_count
                 average = round(average * 2) / 2
+
                 st.success("Average Rating: " + str(average) + "/5 " + g_str(average))
 
         except Exception as error:
-            st.error("Could not load reviews. Firebase is not responding or the database rules are blocking access.")
+            st.error("Could not load reviews.")
             st.code(str(error))
 
     st.markdown("</div>", unsafe_allow_html=True)
@@ -256,6 +310,7 @@ if page == "See Reviews":
 
 if page == "Write Reviews":
     st.markdown("<div class='main-box'>", unsafe_allow_html=True)
+
     st.header("Write a Review")
 
     chosen_professor = st.selectbox("Choose a professor", professors)
