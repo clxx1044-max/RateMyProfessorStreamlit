@@ -257,21 +257,21 @@ def add_background():
         color: black !important;
     }}
 
-    /* ===== Sidebar collapse/expand button ===== */
-
-    button[data-testid="stSidebarCollapseButton"],
-    button[data-testid="stSidebarCollapsedControl"] {{
+    /* This changes the >> sidebar button */
+    button:has(span[data-testid="stIconMaterial"]) {{
         background: cyan !important;
         color: black !important;
         border-radius: 14px !important;
         border: none !important;
     }}
 
-    button[data-testid="stSidebarCollapseButton"]:hover,
-    button[data-testid="stSidebarCollapsedControl"]:hover {{
+    button:has(span[data-testid="stIconMaterial"]):hover {{
         background: #00e5ff !important;
     }}
 
+    button:has(span[data-testid="stIconMaterial"]) span {{
+        color: black !important;
+    }}
     </style>
     """,
     unsafe_allow_html=True
