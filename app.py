@@ -1,7 +1,7 @@
 import os
 import base64
 from datetime import datetime
-
+import hashlib
 import streamlit as st
 from textblob import TextBlob
 
@@ -9,6 +9,8 @@ import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
 
+def generate_sha256(text: str) -> str:
+    return hashlib.sha256(text.encode('utf-8')).hexdigest()
 
 st.set_page_config(page_title="Rate My Professor", page_icon="⭐", layout="wide")
 
@@ -220,6 +222,11 @@ def add_background():
         color: black !important;
     }}
 
+    .stTextInput input {{
+        background: white !important;
+        color: black !important;
+    }}
+
     .stNumberInput input {{
         background: white !important;
         color: black !important;
@@ -288,7 +295,27 @@ def load_reviews(professor_name):
     return results
 
 
-def save_review(professor_name, review, final_rating, auto_rating, rating_type):
+def save_user(name, email):
+    clean_name = name.strip()
+    clean_email = email.strip().lower()
+    email_id = generate_sha256(clean_email)
+
+    db.collection("users").document(email_id).set(
+        {
+            "name": clean_name,
+            "email": clean_email,
+            "email_hash": email_id,
+            "created_at": firestore.SERVER_TIMESTAMP,
+            "created_local": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        },
+        merge=True,
+        timeout=10
+    )
+
+    return email_id
+
+
+def save_review(professor_name, review, final_rating, auto_rating, rating_type, user_name, user_email, user_id):
     db.collection("reviews").add(
         {
             "professor": professor_name,
@@ -296,6 +323,9 @@ def save_review(professor_name, review, final_rating, auto_rating, rating_type):
             "rating": float(final_rating),
             "automatic_rating": float(auto_rating),
             "rating_type": rating_type,
+            "user_name": user_name,
+            "user_email": user_email,
+            "user_id": user_id,
             "created_at": firestore.SERVER_TIMESTAMP,
             "created_local": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         },
@@ -318,7 +348,58 @@ st.markdown(
 
 st.write("")
 
-page = st.sidebar.radio("Choose one", ["See Reviews", "Write Reviews"])
+page = st.sidebar.radio("Choose one", ["Register", "See Reviews", "Write Reviews"])
+
+if "registered" not in st.session_state:
+    st.session_state["registered"] = False
+
+if "user_name" not in st.session_state:
+    st.session_state["user_name"] = ""
+
+if "user_email" not in st.session_state:
+    st.session_state["user_email"] = ""
+
+if "user_id" not in st.session_state:
+    st.session_state["user_id"] = ""
+
+
+if page == "Register":
+    st.markdown("<div class='main-box'>", unsafe_allow_html=True)
+
+    st.header("Register")
+    st.write("Enter your name and email before writing a review.")
+
+    typed_name = st.text_input("Name", value=st.session_state["user_name"])
+    typed_email = st.text_input("Email", value=st.session_state["user_email"])
+
+    if st.button("Register"):
+        if typed_name.strip() == "":
+            st.warning("Please enter your name.")
+        elif typed_email.strip() == "":
+            st.warning("Please enter your email.")
+        elif "@" not in typed_email or "." not in typed_email:
+            st.warning("Please enter a real email address.")
+        else:
+            try:
+                with st.spinner("Saving registration..."):
+                    saved_id = save_user(typed_name, typed_email)
+
+                st.session_state["registered"] = True
+                st.session_state["user_name"] = typed_name.strip()
+                st.session_state["user_email"] = typed_email.strip().lower()
+                st.session_state["user_id"] = saved_id
+
+                st.success("You are registered. You can now write a review.")
+
+            except Exception as error:
+                st.error("The registration could not be saved.")
+                st.code(str(error))
+
+    if st.session_state["registered"]:
+        st.info("Logged in as " + st.session_state["user_name"] + " (" + st.session_state["user_email"] + ")")
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 if page == "See Reviews":
@@ -407,6 +488,12 @@ if page == "Write Reviews":
 
     st.header("Write a Review")
 
+    if not st.session_state["registered"]:
+        st.warning("Please register with your name and email first.")
+        st.stop()
+
+    st.info("Reviewing as " + st.session_state["user_name"] + " (" + st.session_state["user_email"] + ")")
+
     chosen_professor = st.selectbox("Choose a professor", professors)
     review_text = st.text_area("Write your review", height=180)
 
@@ -447,7 +534,10 @@ if page == "Write Reviews":
                         review_text.strip(),
                         final_rating,
                         auto_rating,
-                        rating_type
+                        rating_type,
+                        st.session_state["user_name"],
+                        st.session_state["user_email"],
+                        st.session_state["user_id"]
                     )
 
                 st.success("Your review was submitted. Final rating: " + str(final_rating) + "/5")
