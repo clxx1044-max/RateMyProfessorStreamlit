@@ -179,14 +179,6 @@ def add_background():
         padding-top: 30px;
     }}
 
-    .main-box {{
-        background: rgba(255,255,255,0.90);
-        padding: 25px;
-        border-radius: 16px;
-        border: 1px solid #d5dce5;
-        backdrop-filter: blur(8px);
-        color: black;
-    }}
 
     .review-card {{
         background: #f7f9fc;
