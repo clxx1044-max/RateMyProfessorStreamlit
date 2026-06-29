@@ -164,94 +164,118 @@ def add_background():
         encoded = base64.b64encode(image_file.read()).decode()
 
     st.markdown(
-        f"""
-        <style>
-        .stApp {{
-            background-image:
-                linear-gradient(rgba(245,248,252,0.35), rgba(220,228,238,0.45)),
-                url("data:image/jpg;base64,{encoded}");
-            background-size: cover;
-            background-position: center;
-            background-attachment: fixed;
-        }}
+    f"""
+    <style>
+    .stApp {{
+        background-image:
+            linear-gradient(rgba(245,248,252,0.35), rgba(220,228,238,0.45)),
+            url("data:image/jpg;base64,{encoded}");
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+    }}
 
-        .block-container {{
-            padding-top: 30px;
-        }}
+    .block-container {{
+        padding-top: 30px;
+    }}
 
+    .main-box {{
+        background: rgba(255,255,255,0.90);
+        padding: 25px;
+        border-radius: 16px;
+        border: 1px solid #d5dce5;
+        backdrop-filter: blur(8px);
+        color: black;
+    }}
 
-        .review-card {{
-            background: #f7f9fc;
-            color: black;
-            padding: 22px;
-            border-radius: 14px;
-            border: 1px solid #d7dde6;
-            margin-bottom: 20px;
-        }}
+    .review-card {{
+        background: #f7f9fc;
+        color: black;
+        padding: 22px;
+        border-radius: 14px;
+        border: 1px solid #d7dde6;
+        margin-bottom: 20px;
+    }}
 
-        .average-box {{
-            background: #2e8b57;
-            color: white;
-            padding: 24px;
-            border-radius: 14px;
-            font-size: 26px;
-            font-weight: bold;
-            text-align: center;
-            margin-top: 20px;
-        }}
+    .average-box {{
+        background: #2e8b57;
+        color: white;
+        padding: 24px;
+        border-radius: 14px;
+        font-size: 26px;
+        font-weight: bold;
+        text-align: center;
+        margin-top: 20px;
+    }}
 
-        h1, h2, h3, h4, p, label, span {{
-            color: black !important;
-        }}
+    h1, h2, h3, h4, p, label, span {{
+        color: black !important;
+    }}
 
-        .stMarkdown,
-        .stText,
-        .stWrite {{
-            color: black !important;
-        }}
+    .stMarkdown,
+    .stText,
+    .stWrite {{
+        color: black !important;
+    }}
 
-        .stSelectbox div[data-baseweb="select"] > div {{
-            background: white !important;
-            color: black !important;
-        }}
+    .stSelectbox div[data-baseweb="select"] > div {{
+        background: white !important;
+        color: black !important;
+    }}
 
-        .stTextArea textarea {{
-            background: white !important;
-            color: black !important;
-        }}
+    .stTextArea textarea {{
+        background: white !important;
+        color: black !important;
+    }}
 
-        .stNumberInput input {{
-            background: white !important;
-            color: black !important;
-        }}
+    .stNumberInput input {{
+        background: white !important;
+        color: black !important;
+    }}
 
-        .stRadio label {{
-            color: black !important;
-        }}
+    .stRadio label {{
+        color: black !important;
+    }}
 
-        .stButton > button {{
-            background: #1f77b4;
-            color: white;
-            border-radius: 10px;
-            border: none;
-            font-weight: bold;
-        }}
+    .stButton > button {{
+        background: #1f77b4;
+        color: white;
+        border-radius: 10px;
+        border: none;
+        font-weight: bold;
+    }}
 
-        .stButton > button:hover {{
-            background: #1565a8;
-        }}
+    .stButton > button:hover {{
+        background: #1565a8;
+    }}
 
-        section[data-testid="stSidebar"] {{
-            background: #eef3f8;
-        }}
+    section[data-testid="stSidebar"] {{
+        background: #eef3f8;
+    }}
 
-        section[data-testid="stSidebar"] * {{
-            color: black !important;
-        }}
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
+    section[data-testid="stSidebar"] * {{
+        color: black !important;
+    }}
+
+    /* ===== Sidebar collapse/expand button ===== */
+
+    button[data-testid="stSidebarCollapseButton"],
+    button[data-testid="stSidebarCollapsedControl"] {{
+        background: cyan !important;
+        color: black !important;
+        border-radius: 14px !important;
+        border: none !important;
+    }}
+
+    button[data-testid="stSidebarCollapseButton"]:hover,
+    button[data-testid="stSidebarCollapsedControl"]:hover {{
+        background: #00e5ff !important;
+    }}
+
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
 
 @st.cache_data(ttl=5, show_spinner=False)
