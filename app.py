@@ -548,8 +548,7 @@ t_reg, t_see, t_write = st.tabs(["  Register  ", "  See Reviews  ", "  Write a R
 with t_reg:
     st.markdown('<h2 class="tab-h">Create your account</h2>', unsafe_allow_html=True)
     st.markdown(
-        '<p class="tab-p">Register with your name and email before writing a review.' 
-        '\n Although your information will be hashed, we will be able to connect your name with your responses</p>',
+        '<p class="tab-p">Register with your name and email before writing a review.</p>',
         unsafe_allow_html=True,
     )
 
