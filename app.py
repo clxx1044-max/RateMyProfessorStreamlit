@@ -537,7 +537,7 @@ st.markdown(
     '<div class="mast">'
     '<p class="mast-eye">Student Voices &nbsp;·&nbsp; IST &nbsp;·&nbsp; PLE &nbsp;·&nbsp; SGC</p>'
     '<h1 class="mast-h1">Rate My Professor</h1>'
-    '<p class="mast-sub">Please show respect to your instructors and provide constructive criticism.</p>'
+    '<p class="mast-sub">Please show respect to your instructors and provide constructive criticism!</p>'
     '<div class="mast-rule"></div>'
     '</div>',
     unsafe_allow_html=True,
