@@ -121,7 +121,6 @@ for item in list1:
     if not item.endswith(":"):
         professors.append(item)
 
-# Department map derived from list1 for UI display
 departments: dict = {}
 _dept = None
 for _item in list1:
@@ -171,9 +170,6 @@ def g_str(rating):
         stars = "No stars"
 
     return stars
-
-
-# ─── Design system CSS ────────────────────────────────────────────────────────
 
 DESIGN_CSS = """
 <style>
@@ -531,8 +527,6 @@ def save_review(professor_name, review, final_rating, auto_rating, rating_type, 
     load_reviews.clear()
 
 
-# ─── UI ───────────────────────────────────────────────────────────────────────
-
 for _k, _v in [("registered", False), ("user_name", ""), ("user_email", ""), ("user_id", "")]:
     if _k not in st.session_state:
         st.session_state[_k] = _v
@@ -550,8 +544,6 @@ st.markdown(
 )
 
 t_reg, t_see, t_write = st.tabs(["  Register  ", "  See Reviews  ", "  Write a Review  "])
-
-# ── Register ──────────────────────────────────────────────────────────────────
 
 with t_reg:
     st.markdown('<h2 class="tab-h">Create your account</h2>', unsafe_allow_html=True)
@@ -600,8 +592,6 @@ with t_reg:
             f'</div></div>',
             unsafe_allow_html=True,
         )
-
-# ── See Reviews ───────────────────────────────────────────────────────────────
 
 with t_see:
     st.markdown('<h2 class="tab-h">Browse reviews</h2>', unsafe_allow_html=True)
@@ -692,8 +682,6 @@ with t_see:
         st.error("Could not load reviews.")
         st.code(str(error))
 
-# ── Write a Review ────────────────────────────────────────────────────────────
-
 with t_write:
     st.markdown('<h2 class="tab-h">Write a review</h2>', unsafe_allow_html=True)
 
@@ -781,8 +769,6 @@ with t_write:
                 except Exception as error:
                     st.error("The review could not be saved.")
                     st.code(str(error))
-
-# ─── Footer ───────────────────────────────────────────────────────────────────
 
 st.markdown(
     '<div class="ft">Rate My Professor &nbsp;·&nbsp; IST · PLE · SGC</div>',
