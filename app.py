@@ -242,15 +242,6 @@ footer { visibility:hidden !important; height:0 !important; }
   background-position:center 38%; overflow:hidden;
   margin:1.4rem 0 1.9rem; box-shadow:var(--sh);
 }
-.hero::after {
-  content:""; position:absolute; inset:0;
-  background:linear-gradient(180deg,transparent 50%,rgba(18,22,16,.5) 100%);
-}
-.hero-cap {
-  position:absolute; bottom:13px; left:18px;
-  color:rgba(247,243,236,.88); font-size:.7rem;
-  letter-spacing:.12em; font-weight:700; text-transform:uppercase; z-index:2;
-}
 
 /* ── Tabs ── */
 [data-testid="stTabs"] button[role="tab"] {
@@ -442,9 +433,7 @@ def inject_styles():
         encoded = base64.b64encode(image_file.read()).decode()
 
     st.markdown(
-        f'<div class="hero" style="background-image:url(\'data:image/jpeg;base64,{encoded}\')">'
-        '<span class="hero-cap">Campus &nbsp;·&nbsp; Fall Semester</span>'
-        '</div>',
+        f'<div class="hero" style="background-image:url(\'data:image/jpeg;base64,{encoded}\')"></div>',
         unsafe_allow_html=True,
     )
 
