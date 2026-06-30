@@ -1,18 +1,18 @@
 # Rate My Professor Streamlit Website
 
-This is a Streamlit web version of your Tkinter Rate My Professor programme.
+This is a Streamlit web version of Tkinter Rate My Professor programme.
 
 ## Files
 
 - `app.py` - main website code
 - `requirements.txt` - Python packages
-- `.gitignore` - prevents your private Firebase key from being uploaded
+- `.gitignore` - prevents private Firebase key from being uploaded
 - `.streamlit/secrets.example.toml` - example format for Streamlit Cloud secrets
 
-## Local setup
+## Setup
 
-1. Put your `serviceAccountKey.json` in this folder.
-2. Optional: put your `background.jpg` in this folder.
+1. Put `serviceAccountKey.json` in this folder.
+2. Optional: put `background.jpg` in this folder.
 3. Install packages:
 
 ```bash
