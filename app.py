@@ -242,15 +242,6 @@ footer { visibility:hidden !important; height:0 !important; }
   background-position:center 38%; overflow:hidden;
   margin:1.4rem 0 1.9rem; box-shadow:var(--sh);
 }
-.hero::after {
-  content:""; position:absolute; inset:0;
-  background:linear-gradient(180deg,transparent 50%,rgba(18,22,16,.5) 100%);
-}
-.hero-cap {
-  position:absolute; bottom:13px; left:18px;
-  color:rgba(247,243,236,.88); font-size:.7rem;
-  letter-spacing:.12em; font-weight:700; text-transform:uppercase; z-index:2;
-}
 
 /* ── Tabs ── */
 [data-testid="stTabs"] button[role="tab"] {
@@ -442,9 +433,7 @@ def inject_styles():
         encoded = base64.b64encode(image_file.read()).decode()
 
     st.markdown(
-        f'<div class="hero" style="background-image:url(\'data:image/jpeg;base64,{encoded}\')">'
-        '<span class="hero-cap">Campus &nbsp;·&nbsp; Fall Semester</span>'
-        '</div>',
+        f'<div class="hero" style="background-image:url(\'data:image/jpeg;base64,{encoded}\')"></div>',
         unsafe_allow_html=True,
     )
 
@@ -487,8 +476,27 @@ def load_reviews(professor_name):
     return results
 
 
+def save_user(name, email):
+    clean_name = name.strip()
+    clean_email = email.strip().lower()
+    email_id = generate_sha256(clean_email)
 
-def save_review(professor_name, review, final_rating, auto_rating, rating_type):
+    db.collection("users").document(email_id).set(
+        {
+            "name": clean_name,
+            "email": clean_email,
+            "email_hash": email_id,
+            "created_at": firestore.SERVER_TIMESTAMP,
+            "created_local": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        },
+        merge=True,
+        timeout=10
+    )
+
+    return email_id
+
+
+def save_review(professor_name, review, final_rating, auto_rating, rating_type, user_name, user_email, user_id):
     db.collection("reviews").add(
         {
             "professor": professor_name,
@@ -496,6 +504,9 @@ def save_review(professor_name, review, final_rating, auto_rating, rating_type):
             "rating": float(final_rating),
             "automatic_rating": float(auto_rating),
             "rating_type": rating_type,
+            "user_name": user_name,
+            "user_email": user_email,
+            "user_id": user_id,
             "created_at": firestore.SERVER_TIMESTAMP,
             "created_local": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         },
@@ -504,6 +515,10 @@ def save_review(professor_name, review, final_rating, auto_rating, rating_type):
 
     load_reviews.clear()
 
+
+for _k, _v in [("registered", False), ("user_name", ""), ("user_email", ""), ("user_id", "")]:
+    if _k not in st.session_state:
+        st.session_state[_k] = _v
 
 inject_styles()
 
@@ -517,7 +532,54 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-t_see, t_write = st.tabs(["  See Reviews  ", "  Write a Review  "])
+t_reg, t_see, t_write = st.tabs(["  Register  ", "  See Reviews  ", "  Write a Review  "])
+
+with t_reg:
+    st.markdown('<h2 class="tab-h">Create your account</h2>', unsafe_allow_html=True)
+    st.markdown(
+        '<p class="tab-p">Register with your name and email before writing a review.</p>',
+        unsafe_allow_html=True,
+    )
+
+    c1, c2 = st.columns(2, gap="medium")
+    with c1:
+        typed_name = st.text_input("Full name", placeholder="e.g. Alex Smith", value=st.session_state["user_name"])
+    with c2:
+        typed_email = st.text_input("School email", placeholder="you@school.edu", value=st.session_state["user_email"])
+
+    if st.button("Register"):
+        if not typed_name.strip():
+            st.warning("Please enter your name.")
+        elif not typed_email.strip():
+            st.warning("Please enter your email.")
+        elif "@" not in typed_email or "." not in typed_email:
+            st.warning("Please enter a valid email address.")
+        else:
+            try:
+                with st.spinner("Saving registration…"):
+                    saved_id = save_user(typed_name, typed_email)
+
+                st.session_state.update({
+                    "registered": True,
+                    "user_name": typed_name.strip(),
+                    "user_email": typed_email.strip().lower(),
+                    "user_id": saved_id,
+                })
+                st.success("You're registered. Head to the Write a Review tab to get started.")
+
+            except Exception as error:
+                st.error("Registration could not be saved.")
+                st.code(str(error))
+
+    if st.session_state["registered"]:
+        _i = st.session_state["user_name"][0].upper() if st.session_state["user_name"] else "?"
+        st.markdown(
+            f'<div class="sbd"><div class="sav">{html.escape(_i)}</div><div>'
+            f'<div class="snm">{html.escape(st.session_state["user_name"])}</div>'
+            f'<div class="sem">{html.escape(st.session_state["user_email"])}</div>'
+            f'</div></div>',
+            unsafe_allow_html=True,
+        )
 
 with t_see:
     st.markdown('<h2 class="tab-h">Browse reviews</h2>', unsafe_allow_html=True)
@@ -536,7 +598,7 @@ with t_see:
             reviews = load_reviews(chosen)
 
         if not reviews:
-        st.markdown(
+            st.markdown(
                 f'<div class="empty"><strong>No reviews yet for {html.escape(chosen)}</strong>'
                 f'Be the first — head to the Write a Review tab.</div>',
                 unsafe_allow_html=True,
@@ -563,7 +625,7 @@ with t_see:
                 for s in [5, 4, 3, 2, 1]
             )
 
-        st.markdown(
+            st.markdown(
                 f'<div class="sg">'
                 f'<div class="sb"><div class="sv">{avg:.1f}'
                 f'<span style="font-size:.95rem;color:var(--ink2)">/5</span></div>'
@@ -580,7 +642,7 @@ with t_see:
 
             for d, r in zip(reviews, ratings):
                 review_words = d.get("review", "")
-            rating_type = d.get("rating_type", "Automatic")
+                rating_type = d.get("rating_type", "Automatic")
                 old_auto = d.get("automatic_rating")
                 date_str = d.get("created_local", "")
                 tc = tier_color(r)
@@ -592,7 +654,7 @@ with t_see:
                     if rating_type == "Manual" and old_auto is not None else ""
                 )
 
-        st.markdown(
+                st.markdown(
                     f'<div class="rc" style="--tc:{tc}">'
                     f'<div class="rch">'
                     f'<span class="rcn">{r:.1f}/5&nbsp;&nbsp;{render_stars(r)}</span>'
@@ -609,7 +671,17 @@ with t_see:
         st.code(str(error))
 
 with t_write:
-    st.markdown('<h2 class="tab-h">Write a review</h2>', unsafe_allow_html=True)        _i = st.session_state["user_name"][0].upper() if st.session_state["user_name"] else "?"
+    st.markdown('<h2 class="tab-h">Write a review</h2>', unsafe_allow_html=True)
+
+    if not st.session_state["registered"]:
+        st.warning("You need to register first — head to the Register tab.")
+        st.markdown(
+            '<p style="color:var(--ink2);font-size:.88rem;margin-top:.25rem;">'
+            'Your review is linked to a hashed version of your email, keeping it anonymous.</p>',
+            unsafe_allow_html=True,
+        )
+    else:
+        _i = st.session_state["user_name"][0].upper() if st.session_state["user_name"] else "?"
         st.markdown(
             f'<div class="sbd" style="margin-bottom:1.2rem">'
             f'<div class="sav">{html.escape(_i)}</div><div>'
@@ -619,25 +691,25 @@ with t_write:
             unsafe_allow_html=True,
         )
 
-    chosen_professor = st.selectbox("Choose a professor", professors)
-    dw = departments.get(chosen_professor, "")
-    if dw:
-        st.markdown(
+        chosen_professor = st.selectbox("Choose a professor", professors)
+        dw = departments.get(chosen_professor, "")
+        if dw:
+            st.markdown(
                 f'<p style="margin-top:-.3rem;margin-bottom:.7rem;color:var(--ink2);font-size:.83rem;">'
                 f'Department{dept_badge(dw)}</p>',
                 unsafe_allow_html=True,
             )
 
-    review_text = st.text_area(
+        review_text = st.text_area(
             "Your review",
             height=170,
             placeholder="Share your honest experience — what worked, what didn't, and what would help other students…",
         )
 
-    auto_rating = 0.0
-    if review_text.strip():
-        auto_rating = g_rat(review_text)
-        st.markdown(
+        auto_rating = 0.0
+        if review_text.strip():
+            auto_rating = g_rat(review_text)
+            st.markdown(
                 f'<div class="lrc">'
                 f'<span class="lrn">{auto_rating}/5</span>'
                 f'{render_stars(auto_rating)}'
@@ -646,35 +718,38 @@ with t_write:
                 unsafe_allow_html=True,
             )
 
-    rating_choice = st.radio(
+        rating_choice = st.radio(
             "Rating method",
             ["Use auto-detected rating", "Set my own rating"],
         )
 
-    final_rating = auto_rating
-    rating_type = "Automatic"
-    if rating_choice == "Set my own rating":
-        final_rating = st.number_input(
+        final_rating = auto_rating
+        rating_type = "Automatic"
+        if rating_choice == "Set my own rating":
+            final_rating = st.number_input(
                 "Your rating (0 – 5, steps of 0.5)",
                 min_value=0.0, max_value=5.0,
                 value=float(auto_rating), step=0.5,
             )
-        rating_type = "Manual"
+            rating_type = "Manual"
 
-    if st.button("Submit Review"):
+        if st.button("Submit Review"):
             if not review_text.strip():
                 st.warning("Please write your review before submitting.")
             else:
                 try:
-                final_rating = round(float(final_rating) * 2) / 2
+                    final_rating = round(float(final_rating) * 2) / 2
 
                     with st.spinner("Saving review…"):
                         save_review(
                             chosen_professor,
                             review_text.strip(),
                             final_rating,
-                        auto_rating,
+                            auto_rating,
                             rating_type,
+                            st.session_state["user_name"],
+                            st.session_state["user_email"],
+                            st.session_state["user_id"],
                         )
 
                     st.success(f"Review submitted! Rating: {final_rating}/5")
