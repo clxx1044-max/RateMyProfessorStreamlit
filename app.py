@@ -2,17 +2,13 @@ import os
 import base64
 import html
 from datetime import datetime
-import hashlib
+
 import streamlit as st
 from textblob import TextBlob
 
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
-
-
-def generate_sha256(text: str) -> str:
-    return hashlib.sha256(text.encode('utf-8')).hexdigest()
 
 
 st.set_page_config(
@@ -46,7 +42,7 @@ def start_firebase():
         firebase_admin.initialize_app(cred)
         return firestore.client()
 
-    st.error("Firebase key not found.")
+    st.error("Firebase key not found. Add serviceAccountKey.json or Streamlit secrets.")
     st.stop()
 
 
@@ -128,6 +124,21 @@ for _item in list1:
     else: departments[_item] = _dept
 
 
+professors = []
+
+for item in list1:
+    if not item.endswith(":"):
+        professors.append(item)
+
+departments = {}
+_dept = None
+for _item in list1:
+    if _item.endswith(":"):
+        _dept = _item[:-1]
+    else:
+        departments[_item] = _dept
+
+
 def g_rat(review):
     blob = TextBlob(review)
     polarity = blob.sentiment.polarity
@@ -151,25 +162,6 @@ def g_rat(review):
 
     return rating
 
-
-def g_str(rating):
-    try:
-        rating = float(rating)
-    except Exception:
-        return "No stars"
-
-    full_stars = int(rating)
-    half_star = rating - full_stars
-
-    stars = "★" * full_stars
-
-    if half_star == 0.5:
-        stars += "½"
-
-    if stars == "":
-        stars = "No stars"
-
-    return stars
 
 DESIGN_CSS = """
 <style>
@@ -438,7 +430,7 @@ def inject_styles():
     )
 
 
-def render_stars(rating: float) -> str:
+def render_stars(rating):
     try:
         pct = max(0.0, min(100.0, float(rating) / 5.0 * 100.0))
     except Exception:
@@ -449,12 +441,12 @@ def render_stars(rating: float) -> str:
     )
 
 
-def dept_badge(d: str) -> str:
+def dept_badge(d):
     cls = {"IST": "dIST", "PLE": "dPLE", "SGC": "dSGC"}.get(d, "")
     return f'<span class="dp {cls}">{html.escape(d)}</span>' if d else ""
 
 
-def tier_color(r: float) -> str:
+def tier_color(r):
     return "#2F5233" if r >= 4.0 else ("#B8832C" if r >= 3.0 else "#8C3A34")
 
 
@@ -476,27 +468,7 @@ def load_reviews(professor_name):
     return results
 
 
-def save_user(name, email):
-    clean_name = name.strip()
-    clean_email = email.strip().lower()
-    email_id = generate_sha256(clean_email)
-
-    db.collection("users").document(email_id).set(
-        {
-            "name": clean_name,
-            "email": clean_email,
-            "email_hash": email_id,
-            "created_at": firestore.SERVER_TIMESTAMP,
-            "created_local": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        },
-        merge=True,
-        timeout=10
-    )
-
-    return email_id
-
-
-def save_review(professor_name, review, final_rating, auto_rating, rating_type, user_name, user_email, user_id):
+def save_review(professor_name, review, final_rating, auto_rating, rating_type):
     db.collection("reviews").add(
         {
             "professor": professor_name,
@@ -504,21 +476,14 @@ def save_review(professor_name, review, final_rating, auto_rating, rating_type, 
             "rating": float(final_rating),
             "automatic_rating": float(auto_rating),
             "rating_type": rating_type,
-            "user_name": user_name,
-            "user_email": user_email,
-            "user_id": user_id,
             "created_at": firestore.SERVER_TIMESTAMP,
-            "created_local": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            "created_local": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         },
-        timeout=10
+        timeout=10,
     )
 
     load_reviews.clear()
 
-
-for _k, _v in [("registered", False), ("user_name", ""), ("user_email", ""), ("user_id", "")]:
-    if _k not in st.session_state:
-        st.session_state[_k] = _v
 
 inject_styles()
 
@@ -532,54 +497,8 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-t_reg, t_see, t_write = st.tabs(["  Register  ", "  See Reviews  ", "  Write a Review  "])
+t_see, t_write = st.tabs(["  See Reviews  ", "  Write a Review  "])
 
-with t_reg:
-    st.markdown('<h2 class="tab-h">Create your account</h2>', unsafe_allow_html=True)
-    st.markdown(
-        '<p class="tab-p">Register with your name and email before writing a review.</p>',
-        unsafe_allow_html=True,
-    )
-
-    c1, c2 = st.columns(2, gap="medium")
-    with c1:
-        typed_name = st.text_input("Full name", placeholder="e.g. Alex Smith", value=st.session_state["user_name"])
-    with c2:
-        typed_email = st.text_input("School email", placeholder="you@school.edu", value=st.session_state["user_email"])
-
-    if st.button("Register"):
-        if not typed_name.strip():
-            st.warning("Please enter your name.")
-        elif not typed_email.strip():
-            st.warning("Please enter your email.")
-        elif "@" not in typed_email or "." not in typed_email:
-            st.warning("Please enter a valid email address.")
-        else:
-            try:
-                with st.spinner("Saving registration…"):
-                    saved_id = save_user(typed_name, typed_email)
-
-                st.session_state.update({
-                    "registered": True,
-                    "user_name": typed_name.strip(),
-                    "user_email": typed_email.strip().lower(),
-                    "user_id": saved_id,
-                })
-                st.success("You're registered. Head to the Write a Review tab to get started.")
-
-            except Exception as error:
-                st.error("Registration could not be saved.")
-                st.code(str(error))
-
-    if st.session_state["registered"]:
-        _i = st.session_state["user_name"][0].upper() if st.session_state["user_name"] else "?"
-        st.markdown(
-            f'<div class="sbd"><div class="sav">{html.escape(_i)}</div><div>'
-            f'<div class="snm">{html.escape(st.session_state["user_name"])}</div>'
-            f'<div class="sem">{html.escape(st.session_state["user_email"])}</div>'
-            f'</div></div>',
-            unsafe_allow_html=True,
-        )
 
 with t_see:
     st.markdown('<h2 class="tab-h">Browse reviews</h2>', unsafe_allow_html=True)
@@ -614,13 +533,13 @@ with t_see:
             total = len(ratings)
             avg = round(sum(ratings) / total * 2) / 2
 
-            bkts: dict = {5: 0, 4: 0, 3: 0, 2: 0, 1: 0}
+            bkts = {5: 0, 4: 0, 3: 0, 2: 0, 1: 0}
             for _r in ratings:
                 bkts[min(5, max(1, round(_r)))] += 1
 
             dist = "".join(
                 f'<div class="dr"><span class="dl">{s}★</span>'
-                f'<span class="dt"><span class="df" style="width:{bkts[s]/total*100:.0f}%"></span></span>'
+                f'<span class="dt"><span class="df" style="width:{bkts[s] / total * 100:.0f}%"></span></span>'
                 f'<span class="dn">{bkts[s]}</span></div>'
                 for s in [5, 4, 3, 2, 1]
             )
@@ -670,93 +589,78 @@ with t_see:
         st.error("Could not load reviews.")
         st.code(str(error))
 
+
 with t_write:
     st.markdown('<h2 class="tab-h">Write a review</h2>', unsafe_allow_html=True)
 
-    if not st.session_state["registered"]:
-        st.warning("You need to register first — head to the Register tab.")
+    chosen_professor = st.selectbox("Choose a professor", professors, key="write_prof")
+    dw = departments.get(chosen_professor, "")
+
+    if dw:
         st.markdown(
-            '<p style="color:var(--ink2);font-size:.88rem;margin-top:.25rem;">'
-            'Your review is linked to a hashed version of your email, keeping it anonymous.</p>',
-            unsafe_allow_html=True,
-        )
-    else:
-        _i = st.session_state["user_name"][0].upper() if st.session_state["user_name"] else "?"
-        st.markdown(
-            f'<div class="sbd" style="margin-bottom:1.2rem">'
-            f'<div class="sav">{html.escape(_i)}</div><div>'
-            f'<div class="snm">Posting as {html.escape(st.session_state["user_name"])}</div>'
-            f'<div class="sem">{html.escape(st.session_state["user_email"])}</div>'
-            f'</div></div>',
+            f'<p style="margin-top:-.3rem;margin-bottom:.7rem;color:var(--ink2);font-size:.83rem;">'
+            f'Department{dept_badge(dw)}</p>',
             unsafe_allow_html=True,
         )
 
-        chosen_professor = st.selectbox("Choose a professor", professors)
-        dw = departments.get(chosen_professor, "")
-        if dw:
-            st.markdown(
-                f'<p style="margin-top:-.3rem;margin-bottom:.7rem;color:var(--ink2);font-size:.83rem;">'
-                f'Department{dept_badge(dw)}</p>',
-                unsafe_allow_html=True,
-            )
+    review_text = st.text_area(
+        "Your review",
+        height=170,
+        placeholder="Share your honest experience — what worked, what didn't, and what would help other students…",
+    )
 
-        review_text = st.text_area(
-            "Your review",
-            height=170,
-            placeholder="Share your honest experience — what worked, what didn't, and what would help other students…",
+    auto_rating = 0.0
+    if review_text.strip():
+        auto_rating = g_rat(review_text)
+        st.markdown(
+            f'<div class="lrc">'
+            f'<span class="lrn">{auto_rating}/5</span>'
+            f'{render_stars(auto_rating)}'
+            f'<span class="lrl">Auto-detected rating</span>'
+            f'</div>',
+            unsafe_allow_html=True,
         )
 
-        auto_rating = 0.0
-        if review_text.strip():
-            auto_rating = g_rat(review_text)
-            st.markdown(
-                f'<div class="lrc">'
-                f'<span class="lrn">{auto_rating}/5</span>'
-                f'{render_stars(auto_rating)}'
-                f'<span class="lrl">Auto-detected rating</span>'
-                f'</div>',
-                unsafe_allow_html=True,
-            )
+    rating_choice = st.radio(
+        "Rating method",
+        ["Use auto-detected rating", "Set my own rating"],
+    )
 
-        rating_choice = st.radio(
-            "Rating method",
-            ["Use auto-detected rating", "Set my own rating"],
+    final_rating = auto_rating
+    rating_type = "Automatic"
+
+    if rating_choice == "Set my own rating":
+        final_rating = st.number_input(
+            "Your rating (0 – 5, steps of 0.5)",
+            min_value=0.0,
+            max_value=5.0,
+            value=float(auto_rating),
+            step=0.5,
         )
+        rating_type = "Manual"
 
-        final_rating = auto_rating
-        rating_type = "Automatic"
-        if rating_choice == "Set my own rating":
-            final_rating = st.number_input(
-                "Your rating (0 – 5, steps of 0.5)",
-                min_value=0.0, max_value=5.0,
-                value=float(auto_rating), step=0.5,
-            )
-            rating_type = "Manual"
+    if st.button("Submit Review"):
+        if not review_text.strip():
+            st.warning("Please write your review before submitting.")
+        else:
+            try:
+                final_rating = round(float(final_rating) * 2) / 2
 
-        if st.button("Submit Review"):
-            if not review_text.strip():
-                st.warning("Please write your review before submitting.")
-            else:
-                try:
-                    final_rating = round(float(final_rating) * 2) / 2
+                with st.spinner("Saving review…"):
+                    save_review(
+                        chosen_professor,
+                        review_text.strip(),
+                        final_rating,
+                        auto_rating,
+                        rating_type,
+                    )
 
-                    with st.spinner("Saving review…"):
-                        save_review(
-                            chosen_professor,
-                            review_text.strip(),
-                            final_rating,
-                            auto_rating,
-                            rating_type,
-                            st.session_state["user_name"],
-                            st.session_state["user_email"],
-                            st.session_state["user_id"],
-                        )
+                st.success(f"Review submitted! Rating: {final_rating}/5")
 
-                    st.success(f"Review submitted! Rating: {final_rating}/5")
+            except Exception as error:
+                st.error("The review could not be saved.")
+                st.code(str(error))
 
-                except Exception as error:
-                    st.error("The review could not be saved.")
-                    st.code(str(error))
 
 st.markdown(
     '<div class="ft">Rate My Professor &nbsp;·&nbsp; IST · PLE · SGC</div>',
