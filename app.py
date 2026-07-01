@@ -2,13 +2,15 @@ import os
 import base64
 import html
 from datetime import datetime
-
 import streamlit as st
 from textblob import TextBlob
 
-import firebase_admin
-from firebase_admin import credentials
-from firebase_admin import firestore
+# ── DEMO MODE: Firebase imports commented out ──────────────────────────────────
+# Uncomment the three lines below and remove the demo data to restore the full app.
+# import firebase_admin
+# from firebase_admin import credentials
+# from firebase_admin import firestore
+# ──────────────────────────────────────────────────────────────────────────────
 
 
 st.set_page_config(
@@ -19,103 +21,117 @@ st.set_page_config(
 )
 
 folder = os.path.dirname(os.path.abspath(__file__))
-key_file = os.path.join(folder, "serviceAccountKey.json")
 background_file = os.path.join(folder, "background.jpg")
 
 
-def start_firebase():
-    if firebase_admin._apps:
-        return firestore.client()
-
-    if os.path.exists(key_file):
-        cred = credentials.Certificate(key_file)
-        firebase_admin.initialize_app(cred)
-        return firestore.client()
-
-    if "firebase" in st.secrets:
-        firebase_info = dict(st.secrets["firebase"])
-
-        if "private_key" in firebase_info:
-            firebase_info["private_key"] = firebase_info["private_key"].replace("\\n", "\n")
-
-        cred = credentials.Certificate(firebase_info)
-        firebase_admin.initialize_app(cred)
-        return firestore.client()
-
-    st.error("Firebase key not found. Add serviceAccountKey.json or Streamlit secrets.")
-    st.stop()
-
-
-db = start_firebase()
+# ── DEMO MODE: Firebase connection commented out ───────────────────────────────
+# def start_firebase():
+#     if firebase_admin._apps:
+#         return firestore.client()
+#     key_file = os.path.join(folder, "serviceAccountKey.json")
+#     if os.path.exists(key_file):
+#         cred = credentials.Certificate(key_file)
+#         firebase_admin.initialize_app(cred)
+#         return firestore.client()
+#     if "firebase" in st.secrets:
+#         firebase_info = dict(st.secrets["firebase"])
+#         if "private_key" in firebase_info:
+#             firebase_info["private_key"] = firebase_info["private_key"].replace("\\n", "\n")
+#         cred = credentials.Certificate(firebase_info)
+#         firebase_admin.initialize_app(cred)
+#         return firestore.client()
+#     st.error("Firebase key not found. Add serviceAccountKey.json or Streamlit secrets.")
+#     st.stop()
+#
+# db = start_firebase()
+# ──────────────────────────────────────────────────────────────────────────────
 
 
+# ── ORIGINAL PROFESSOR LIST — restore after demo ───────────────────────────────
+# list1 = [
+#     "IST:",
+#     "Aileen Aizenshtat",
+#     "AJ LaConte",
+#     "Alex Korablev",
+#     "Anne Eta",
+#     "Antara Bajaj",
+#     "Anushka Chandran",
+#     "Brandon Yang",
+#     "Charnice Hoegnifioh",
+#     "Ezra Laufenberg",
+#     "Frank Petty",
+#     "Gabriela Rodrigues de Morais",
+#     "Galiya Askarova",
+#     "Hillary Babalola",
+#     "Joseph Elsayyid",
+#     "Kayla Hightower",
+#     "Kevin Patterson",
+#     "Micah Okwah",
+#     "Nathan Beyene",
+#     "Nhan Nguyen",
+#     "Pedro Goncalves de Paiva",
+#     "Rapunzel Chen",
+#     "PLE:",
+#     "Diego Martinez Rios",
+#     "Josie Morrison",
+#     "Liam Heraty",
+#     "Liza Sadaterashvili",
+#     "Andrey Sokolov",
+#     "Angela Hummingbird",
+#     "Christian Thomas",
+#     "David Johnson",
+#     "Jada Wilson",
+#     "Karolina Kedzia",
+#     "Lauren Johnson",
+#     "Paula Garcia",
+#     "Polina Protozanova",
+#     "Sherry Huang",
+#     "Taisei Ishikawa",
+#     "Taylor Craig",
+#     "Zeeshan Ali",
+#     "SGC:",
+#     "Bamlak Aklilu",
+#     "Divin Dushimimana",
+#     "Esha Akhtar",
+#     "James Obasiolu",
+#     "Breanna Ellison",
+#     "Camila Pantoja",
+#     "Christina Oh",
+#     "Henry Vo",
+#     "Kadiatou Keita",
+#     "Melanie Trotochaud",
+#     "Olivia Birney",
+#     "Phoebe Yeh",
+#     "Raquel Mandojana",
+#     "Rebecca McMillin-Hastings",
+#     "Salaar Ali",
+#     "Vitoria Souza Reyes",
+# ]
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+# ── DEMO LIST — comment out and restore original list above after demo ─────────
 list1 = [
     "IST:",
-    "Aileen Aizenshtat",
-    "AJ LaConte",
-    "Alex Korablev",
-    "Anne Eta",
-    "Antara Bajaj",
-    "Anushka Chandran",
-    "Brandon Yang",
-    "Charnice Hoegnifioh",
-    "Ezra Laufenberg",
-    "Frank Petty",
-    "Gabriela Rodrigues de Morais",
-    "Galiya Askarova",
-    "Hillary Babalola",
-    "Joseph Elsayyid",
-    "Kayla Hightower",
-    "Kevin Patterson",
-    "Micah Okwah",
-    "Nathan Beyene",
-    "Nhan Nguyen",
-    "Pedro Goncalves de Paiva",
-    "Rapunzel Chen",
-
+    "Mr. Jonathan Blake",
+    "Ms. Sarah Chen",
+    "Dr. Marcus Webb",
+    "Ms. Lily Nakamura",
     "PLE:",
-    "Diego Martinez Rios",
-    "Josie Morrison",
-    "Liam Heraty",
-    "Liza Sadaterashvili",
-    "Andrey Sokolov",
-    "Angela Hummingbird",
-    "Christian Thomas",
-    "David Johnson",
-    "Jada Wilson",
-    "Karolina Kedzia",
-    "Lauren Johnson",
-    "Paula Garcia",
-    "Polina Protozanova",
-    "Sherry Huang",
-    "Taisei Ishikawa",
-    "Taylor Craig",
-    "Zeeshan Ali",
-
+    "Ms. Priya Sharma",
+    "Mr. David Okafor",
+    "Dr. Elena Russo",
+    "Mr. Ben Calloway",
     "SGC:",
-    "Bamlak Aklilu",
-    "Divin Dushimimana",
-    "Esha Akhtar",
-    "James Obasiolu",
-    "Breanna Ellison",
-    "Camila Pantoja",
-    "Christina Oh",
-    "Henry Vo",
-    "Kadiatou Keita",
-    "Melanie Trotochaud",
-    "Olivia Birney",
-    "Phoebe Yeh",
-    "Raquel Mandojana",
-    "Rebecca McMillin-Hastings",
-    "Salaar Ali",
-    "Vitoria Souza Reyes"
+    "Mr. Carlos Rivera",
+    "Ms. Amara Osei",
+    "Dr. Thomas Park",
+    "Ms. Zoe Fitzgerald",
 ]
+# ──────────────────────────────────────────────────────────────────────────────
 
-professors = []
 
-for item in list1:
-    if not item.endswith(":"):
-        professors.append(item)
+professors = [x for x in list1 if not x.endswith(":")]
 
 departments: dict = {}
 _dept = None
@@ -124,44 +140,141 @@ for _item in list1:
     else: departments[_item] = _dept
 
 
-professors = []
-
-for item in list1:
-    if not item.endswith(":"):
-        professors.append(item)
-
-departments = {}
-_dept = None
-for _item in list1:
-    if _item.endswith(":"):
-        _dept = _item[:-1]
-    else:
-        departments[_item] = _dept
-
-
 def g_rat(review):
     blob = TextBlob(review)
     polarity = blob.sentiment.polarity
-
     rating = (polarity + 1) * 2.5
     words = review.lower()
-
-    if "would not recommend" in words:
-        rating -= 1
-    if "avoid" in words:
-        rating -= 1
-    if "unfair" in words:
-        rating -= 0.5
-    if "confusing" in words:
-        rating -= 0.5
-    if "disorganised" in words or "disorganized" in words:
-        rating -= 0.5
-
+    if "would not recommend" in words: rating -= 1
+    if "avoid" in words: rating -= 1
+    if "unfair" in words: rating -= 0.5
+    if "confusing" in words: rating -= 0.5
+    if "disorganised" in words or "disorganized" in words: rating -= 0.5
     rating = round(rating * 2) / 2
-    rating = max(0, min(5, rating))
+    return max(0, min(5, rating))
 
-    return rating
 
+# ── DEMO MODE: Hardcoded reviews ───────────────────────────────────────────────
+# Remove DEMO_REVIEWS and restore load_reviews below to reconnect to Firebase.
+DEMO_REVIEWS: dict = {
+    "Mr. Jonathan Blake": [
+        {
+            "review": "One of the best teachers I've had. Explains complex topics in a way that actually makes sense, and is always willing to help after class. Highly recommend.",
+            "rating": 5.0, "automatic_rating": 5.0, "rating_type": "Automatic",
+            "created_local": "2025-11-04 09:22",
+        },
+        {
+            "review": "Decent teacher but can be disorganized at times. The material is clear when he's on point, but some lessons feel rushed. Grading is fair though.",
+            "rating": 3.0, "automatic_rating": 3.5, "rating_type": "Manual",
+            "created_local": "2025-11-18 14:05",
+        },
+        {
+            "review": "I found the class pretty confusing. The pace was too fast and grading criteria were never fully explained. Would not recommend unless you already know the material.",
+            "rating": 1.5, "automatic_rating": 1.5, "rating_type": "Automatic",
+            "created_local": "2025-12-02 11:40",
+        },
+    ],
+    "Ms. Sarah Chen": [
+        {
+            "review": "Absolutely amazing. She makes every lesson engaging and clearly puts a lot of effort into her teaching. One of the highlights of my semester.",
+            "rating": 5.0, "automatic_rating": 5.0, "rating_type": "Automatic",
+            "created_local": "2025-11-07 10:15",
+        },
+        {
+            "review": "Really good teacher. Explains things clearly and is very approachable. The homework load can be a bit much but the content is genuinely interesting.",
+            "rating": 4.0, "automatic_rating": 4.0, "rating_type": "Automatic",
+            "created_local": "2025-11-21 16:33",
+        },
+    ],
+    "Dr. Marcus Webb": [
+        {
+            "review": "Very disorganized and classes felt unprepared most of the time. Would not recommend. Hard to follow along and feedback on assignments was never useful.",
+            "rating": 1.5, "automatic_rating": 1.5, "rating_type": "Automatic",
+            "created_local": "2025-12-05 08:55",
+        },
+    ],
+    "Ms. Priya Sharma": [
+        {
+            "review": "Great teacher who really cares about her students. She explains difficult concepts clearly and gives genuinely helpful feedback on assignments.",
+            "rating": 4.5, "automatic_rating": 4.5, "rating_type": "Automatic",
+            "created_local": "2025-11-03 13:10",
+        },
+        {
+            "review": "One of my favourite teachers. Her enthusiasm for the subject is contagious and she always makes time for questions after class.",
+            "rating": 5.0, "automatic_rating": 5.0, "rating_type": "Automatic",
+            "created_local": "2025-11-15 09:47",
+        },
+        {
+            "review": "Good overall, though some topics felt rushed toward the end of the term. Still a solid teacher and very approachable.",
+            "rating": 3.5, "automatic_rating": 3.5, "rating_type": "Automatic",
+            "created_local": "2025-12-01 15:22",
+        },
+    ],
+    "Mr. David Okafor": [
+        {
+            "review": "Super engaging and knowledgeable. He brings real-world examples into every lesson which makes it so much easier to understand.",
+            "rating": 4.5, "automatic_rating": 4.5, "rating_type": "Automatic",
+            "created_local": "2025-11-10 11:00",
+        },
+        {
+            "review": "Solid teacher. Can be strict about deadlines, but completely fair. The class is challenging but very rewarding by the end.",
+            "rating": 4.0, "automatic_rating": 4.0, "rating_type": "Automatic",
+            "created_local": "2025-11-28 17:14",
+        },
+    ],
+    "Dr. Elena Russo": [
+        {
+            "review": "Lessons are hard to follow and she rarely checks whether students are keeping up. The content itself is interesting but the delivery needs a lot of work.",
+            "rating": 2.0, "automatic_rating": 2.5, "rating_type": "Manual",
+            "created_local": "2025-11-30 12:08",
+        },
+    ],
+}
+
+
+@st.cache_data(ttl=5, show_spinner=False)
+def load_reviews(professor_name):
+    return list(DEMO_REVIEWS.get(professor_name, []))
+
+
+# ── ORIGINAL load_reviews — restore after demo (also remove DEMO_REVIEWS above) ─
+# @st.cache_data(ttl=5, show_spinner=False)
+# def load_reviews(professor_name):
+#     results = []
+#     docs = (
+#         db.collection("reviews")
+#         .where("professor", "==", professor_name)
+#         .limit(100)
+#         .stream(timeout=10)
+#     )
+#     for doc in docs:
+#         data = doc.to_dict()
+#         results.append(data)
+#     return results
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+def save_review(professor_name, review, final_rating, auto_rating, rating_type):
+    # ── DEMO MODE: Not saving to Firebase ─────────────────────────────────────
+    # Restore the block below after demo.
+    # db.collection("reviews").add(
+    #     {
+    #         "professor": professor_name,
+    #         "review": review,
+    #         "rating": float(final_rating),
+    #         "automatic_rating": float(auto_rating),
+    #         "rating_type": rating_type,
+    #         "created_at": firestore.SERVER_TIMESTAMP,
+    #         "created_local": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+    #     },
+    #     timeout=10,
+    # )
+    # load_reviews.clear()
+    pass
+    # ──────────────────────────────────────────────────────────────────────────
+
+
+# ─── Design system CSS ────────────────────────────────────────────────────────
 
 DESIGN_CSS = """
 <style>
@@ -370,21 +483,6 @@ label p, .stMarkdown p, .stRadio label,
 .dPLE { background:#DCE9E9; color:#275557; }
 .dSGC { background:#EADEED; color:#5A3563; }
 
-/* ── Session badge ── */
-.sbd {
-  display:flex; align-items:center; gap:.6rem;
-  background:var(--alt); border:1px solid #BDD1BA;
-  border-radius:10px; padding:.65rem .95rem; margin:1rem 0;
-}
-.sav {
-  width:34px; height:34px; border-radius:50%;
-  background:var(--accent); color:#F7F3EC;
-  display:flex; align-items:center; justify-content:center;
-  font-family:'Fraunces',serif; font-weight:600; font-size:1rem; flex-shrink:0;
-}
-.snm { font-weight:700; font-size:.9rem; color:var(--ink); }
-.sem { font-size:.78rem; color:var(--ink2); }
-
 /* ── Live rating chip ── */
 .lrc {
   display:inline-flex; align-items:center; gap:.5rem;
@@ -450,41 +548,6 @@ def tier_color(r):
     return "#2F5233" if r >= 4.0 else ("#B8832C" if r >= 3.0 else "#8C3A34")
 
 
-@st.cache_data(ttl=5, show_spinner=False)
-def load_reviews(professor_name):
-    results = []
-
-    docs = (
-        db.collection("reviews")
-        .where("professor", "==", professor_name)
-        .limit(100)
-        .stream(timeout=10)
-    )
-
-    for doc in docs:
-        data = doc.to_dict()
-        results.append(data)
-
-    return results
-
-
-def save_review(professor_name, review, final_rating, auto_rating, rating_type):
-    db.collection("reviews").add(
-        {
-            "professor": professor_name,
-            "review": review,
-            "rating": float(final_rating),
-            "automatic_rating": float(auto_rating),
-            "rating_type": rating_type,
-            "created_at": firestore.SERVER_TIMESTAMP,
-            "created_local": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        },
-        timeout=10,
-    )
-
-    load_reviews.clear()
-
-
 inject_styles()
 
 st.markdown(
@@ -533,7 +596,7 @@ with t_see:
             total = len(ratings)
             avg = round(sum(ratings) / total * 2) / 2
 
-            bkts = {5: 0, 4: 0, 3: 0, 2: 0, 1: 0}
+            bkts: dict = {5: 0, 4: 0, 3: 0, 2: 0, 1: 0}
             for _r in ratings:
                 bkts[min(5, max(1, round(_r)))] += 1
 
@@ -643,23 +706,9 @@ with t_write:
         if not review_text.strip():
             st.warning("Please write your review before submitting.")
         else:
-            try:
-                final_rating = round(float(final_rating) * 2) / 2
-
-                with st.spinner("Saving review…"):
-                    save_review(
-                        chosen_professor,
-                        review_text.strip(),
-                        final_rating,
-                        auto_rating,
-                        rating_type,
-                    )
-
-                st.success(f"Review submitted! Rating: {final_rating}/5")
-
-            except Exception as error:
-                st.error("The review could not be saved.")
-                st.code(str(error))
+            final_rating = round(float(final_rating) * 2) / 2
+            save_review(chosen_professor, review_text.strip(), final_rating, auto_rating, rating_type)
+            st.success(f"Review submitted! Rating: {final_rating}/5")
 
 
 st.markdown(
